@@ -3,1530 +3,1487 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>The Simulation - Cyberpunk RPG</title>
+<title>The Simulation</title>
 <style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body { background: #0a0a0f; color: #00ffcc; font-family: 'Courier New', monospace; overflow: hidden; width: 100vw; height: 100vh; }
-#game-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
-#ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 2; pointer-events: none; }
-#ui-layer > * { pointer-events: auto; }
-#hud { position: absolute; top: 10px; left: 10px; right: 10px; display: none; }
-#hud-bars { display: flex; gap: 15px; align-items: center; }
-.bar-container { width: 200px; height: 20px; background: #1a1a2e; border: 1px solid #00ffcc; position: relative; }
-.bar-fill { height: 100%; transition: width 0.3s; }
-.hp-fill { background: linear-gradient(90deg, #ff0040, #ff4060); }
-.xp-fill { background: linear-gradient(90deg, #00ccff, #00ffcc); }
-.bar-text { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 11px; color: #fff; text-shadow: 1px 1px 2px #000; }
-#hud-credits { color: #ffcc00; font-size: 14px; }
-#hud-phase { color: #ff00ff; font-size: 12px; position: absolute; top: 10px; right: 10px; }
-#hud-minimap { position: absolute; top: 40px; right: 10px; width: 150px; height: 150px; background: rgba(10,10,20,0.8); border: 1px solid #00ffcc; }
-#hud-controls { position: absolute; bottom: 10px; left: 10px; font-size: 10px; color: #555; }
-#dialog-box { display: none; position: absolute; bottom: 60px; left: 50%; transform: translateX(-50%); width: 600px; max-width: 90%; background: rgba(10,10,30,0.95); border: 1px solid #00ffcc; padding: 20px; font-size: 14px; line-height: 1.6; }
-#dialog-speaker { color: #ff00ff; margin-bottom: 5px; font-weight: bold; }
-#dialog-text { color: #ccc; }
-#dialog-options { margin-top: 10px; }
-.dialog-option { cursor: pointer; padding: 5px 10px; margin: 3px 0; border: 1px solid #333; color: #00ffcc; }
-.dialog-option:hover { background: #1a1a3e; border-color: #00ffcc; }
-#menu-screen { display: flex; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #0a0a0f; flex-direction: column; align-items: center; justify-content: center; z-index: 10; }
-#menu-screen h1 { font-size: 48px; color: #00ffcc; text-shadow: 0 0 20px #00ffcc, 0 0 40px #00ffcc; margin-bottom: 10px; }
-#menu-screen h2 { font-size: 16px; color: #ff00ff; margin-bottom: 40px; }
-.menu-btn { display: block; margin: 8px; padding: 12px 40px; background: transparent; border: 1px solid #00ffcc; color: #00ffcc; font-family: inherit; font-size: 16px; cursor: pointer; min-width: 200px; }
-.menu-btn:hover { background: #00ffcc; color: #0a0a0f; }
-#phase1-screen, #inventory-screen, #hack-screen { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(10,10,20,0.97); z-index: 10; flex-direction: column; align-items: center; justify-content: center; }
-#phase1-screen h2 { color: #00ffcc; margin-bottom: 20px; }
-.phase1-input { background: #111; border: 1px solid #00ffcc; color: #00ffcc; padding: 10px; font-family: inherit; font-size: 16px; margin: 5px; width: 250px; text-align: center; }
-.class-select { display: flex; gap: 15px; margin: 20px 0; }
-.class-card { width: 160px; padding: 15px; background: #111; border: 1px solid #333; cursor: pointer; text-align: center; }
-.class-card:hover, .class-card.selected { border-color: #00ffcc; box-shadow: 0 0 10px rgba(0,255,204,0.3); }
-.class-card h3 { color: #ff00ff; margin-bottom: 5px; }
-.class-card p { color: #888; font-size: 11px; }
-.stat-row { display: flex; align-items: center; gap: 10px; margin: 5px 0; color: #ccc; }
-.stat-row button { width: 25px; height: 25px; background: #222; border: 1px solid #00ffcc; color: #00ffcc; cursor: pointer; }
-.stat-row button:hover { background: #00ffcc; color: #000; }
-#stat-points { color: #ffcc00; margin: 10px 0; }
-#inventory-screen { overflow-y: auto; }
-.inv-grid { display: flex; flex-wrap: wrap; gap: 10px; padding: 20px; justify-content: center; }
-.inv-slot { width: 60px; height: 60px; background: #111; border: 1px solid #333; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; }
-.inv-slot:hover { border-color: #00ffcc; }
-.inv-slot.equipped { border-color: #ff00ff; }
-#hack-screen { display: none; flex-direction: column; align-items: center; justify-content: center; }
-#hack-grid { display: grid; gap: 5px; margin: 20px; }
-.hack-cell { width: 50px; height: 50px; background: #111; border: 1px solid #333; display: flex; align-items: center; justify-content: center; font-size: 20px; cursor: pointer; transition: all 0.2s; }
-.hack-cell:hover { border-color: #00ffcc; }
-.hack-cell.matched { background: #003322; border-color: #00ffcc; }
-.hack-cell.wrong { background: #330011; border-color: #ff0040; }
-#hack-timer { font-size: 24px; color: #ff0040; }
-#hack-status { color: #00ffcc; font-size: 18px; margin: 10px; }
-.scanline { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,255,204,0.015) 2px, rgba(0,255,204,0.015) 4px); pointer-events: none; z-index: 100; }
-#notification { display: none; position: absolute; top: 50px; left: 50%; transform: translateX(-50%); padding: 10px 20px; background: rgba(0,255,204,0.15); border: 1px solid #00ffcc; color: #00ffcc; font-size: 14px; z-index: 50; }
-#game-over { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 20; flex-direction: column; align-items: center; justify-content: center; }
-#game-over h1 { color: #ff0040; font-size: 48px; margin-bottom: 20px; }
-#shop-screen { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(10,10,20,0.97); z-index: 10; flex-direction: column; align-items: center; justify-content: center; }
-.shop-item { display: flex; align-items: center; gap: 15px; padding: 10px; border: 1px solid #333; margin: 5px; cursor: pointer; width: 400px; }
-.shop-item:hover { border-color: #ffcc00; }
-.shop-item .price { color: #ffcc00; }
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0a0f;color:#0ff;font-family:'Courier New',monospace;overflow:hidden;width:100vw;height:100vh}
+#game-canvas{position:absolute;top:0;left:0;width:100%;height:100%;z-index:1}
+#scanlines{position:fixed;top:0;left:0;width:100%;height:100%;background:repeating-linear-gradient(0deg,rgba(0,0,0,0.15)0px,rgba(0,0,0,0.15)1px,transparent 1px,transparent 3px);z-index:1000;pointer-events:none}
+#ui-layer{position:absolute;top:0;left:0;width:100%;height:100%;z-index:10;pointer-events:none}
+#ui-layer>*{pointer-events:auto}
+#hud{position:absolute;top:10px;left:10px;right:10px;display:none;font-size:14px}
+.hud-bar{height:20px;border:1px solid;border-radius:2px;margin:2px 0;position:relative;overflow:hidden}
+.hud-bar-fill{height:100%;transition:width 0.3s}
+.hp-bar{border-color:#f0f}.hp-fill{background:linear-gradient(90deg,#f0f,#f66)}
+.xp-bar{border-color:#0f0}.xp-fill{background:linear-gradient(90deg,#0a0,#0f0)}
+.hud-left{float:left;width:200px}.hud-right{float:right;text-align:right}
+.hud-center{text-align:center}
+#dialog-box{display:none;position:absolute;bottom:80px;left:50%;transform:translateX(-50%);width:600px;max-width:90%;background:rgba(0,10,20,0.95);border:1px solid #0ff;padding:15px;border-radius:4px;font-size:14px}
+#dialog-speaker{color:#f0f;font-weight:bold;margin-bottom:5px}
+#dialog-text{color:#0ff;line-height:1.4}
+#dialog-options{margin-top:10px}
+.dialog-opt{display:block;color:#0f0;cursor:pointer;padding:4px;margin:2px 0;border:1px solid transparent}
+.dialog-opt:hover{border-color:#0f0;background:rgba(0,255,0,0.1)}
+#overlay-screen{position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:rgba(0,5,10,0.97);z-index:50}
+.overlay-panel{background:rgba(0,10,20,0.95);border:1px solid #0ff;padding:30px;border-radius:4px;max-width:700px;width:90%;max-height:90vh;overflow-y:auto}
+.overlay-panel h1,.overlay-panel h2{color:#f0f;text-align:center;margin-bottom:15px;text-shadow:0 0 10px #f0f}
+.overlay-panel h1{font-size:28px}
+.btn{display:inline-block;padding:10px 24px;margin:5px;border:1px solid #0ff;background:rgba(0,255,255,0.1);color:#0ff;cursor:pointer;font-family:inherit;font-size:14px;transition:all 0.2s}
+.btn:hover{background:rgba(0,255,255,0.3);box-shadow:0 0 15px rgba(0,255,255,0.3)}
+.btn-magenta{border-color:#f0f;color:#f0f;background:rgba(255,0,255,0.1)}
+.btn-magenta:hover{background:rgba(255,0,255,0.3)}
+.btn-green{border-color:#0f0;color:#0f0;background:rgba(0,255,0,0.1)}
+.btn-green:hover{background:rgba(0,255,0,0.3)}
+input[type="text"],input[type="number"]{background:rgba(0,20,40,0.8);border:1px solid #0ff;color:#0ff;padding:8px;font-family:inherit;font-size:14px;width:100%}
+.class-card{display:inline-block;width:180px;border:1px solid #555;padding:15px;margin:8px;cursor:pointer;text-align:center;vertical-align:top;transition:all 0.2s}
+.class-card:hover,.class-card.selected{border-color:#0ff;box-shadow:0 0 15px rgba(0,255,255,0.3)}
+.class-card h3{color:#f0f;margin-bottom:8px}
+.class-card p{font-size:12px;color:#888}
+.stat-row{display:flex;align-items:center;justify-content:space-between;margin:4px 0;padding:4px}
+.stat-row label{width:80px;color:#0ff}.stat-row span{color:#0f0;width:30px;text-align:center}
+.stat-btn{width:28px;height:28px;border:1px solid #0ff;background:rgba(0,255,255,0.1);color:#0ff;cursor:pointer;font-size:16px}
+.stat-btn:hover{background:rgba(0,255,255,0.3)}
+.stat-btn:disabled{opacity:0.3;cursor:default}
+#inventory-panel,#map-panel,#menu-panel{display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:60}
+.panel-inner{background:rgba(0,10,20,0.97);border:1px solid #0ff;padding:20px;border-radius:4px;min-width:400px;max-width:600px;max-height:80vh;overflow-y:auto}
+.item-slot{display:inline-block;width:60px;height:60px;border:1px solid #333;margin:3px;text-align:center;line-height:60px;font-size:10px;cursor:pointer;vertical-align:top;position:relative}
+.item-slot:hover{border-color:#0ff}
+.item-slot .item-name{position:absolute;bottom:2px;left:2px;right:2px;font-size:8px;color:#0f0}
+.shop-item{display:flex;justify-content:space-between;padding:8px;border-bottom:1px solid #222;cursor:pointer}
+.shop-item:hover{background:rgba(0,255,255,0.1)}
+.zone-indicator{position:absolute;top:50px;left:50%;transform:translateX(-50%);color:#f0f;font-size:18px;text-shadow:0 0 10px #f0f;transition:opacity 0.5s;z-index:20}
+#hack-minigame{display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:70;background:rgba(0,5,10,0.98);border:2px solid #0f0;padding:20px;border-radius:4px;width:500px;max-width:95%}
+#hack-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin:10px 0}
+.hack-cell{width:50px;height:50px;border:1px solid #0f0;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;transition:all 0.15s}
+.hack-cell:hover{background:rgba(0,255,0,0.2)}
+.hack-cell.matched{background:rgba(0,255,0,0.4);border-color:#0ff}
+.hack-cell.wrong{background:rgba(255,0,0,0.4);border-color:#f00}
+#hack-timer{height:8px;background:#0f0;transition:width 0.1s linear;margin-top:10px}
+#combat-log{position:absolute;bottom:10px;left:10px;width:280px;max-height:150px;overflow-y:auto;font-size:11px;color:#888;display:none}
+.log-dmg{color:#f66}.log-heal{color:#0f0}.log-info{color:#0ff}.log-hack{color:#f0f}
+#ability-bar{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);display:none;z-index:15}
+.ability-slot{display:inline-block;width:50px;height:50px;border:1px solid #0ff;margin:0 3px;text-align:center;line-height:50px;font-size:10px;position:relative;background:rgba(0,10,20,0.8)}
+.ability-cd{position:absolute;top:0;left:0;right:0;background:rgba(0,0,0,0.7);color:#f0f;font-size:12px}
+.ability-key{position:absolute;bottom:2px;right:3px;font-size:9px;color:#888}
+#notification{position:absolute;top:80px;left:50%;transform:translateX(-50%);color:#0f0;font-size:16px;text-shadow:0 0 10px #0f0;opacity:0;transition:opacity 0.4s;z-index:25;text-align:center}
+#boss-hp{display:none;position:absolute;top:60px;left:50%;transform:translateX(-50%);width:400px;max-width:80%;z-index:20}
+#boss-hp .hud-bar{height:14px;border-color:#f00}
+#boss-hp .hud-bar-fill{background:linear-gradient(90deg,#f00,#f60)}
+#boss-hp .boss-name{text-align:center;color:#f00;font-size:12px;margin-bottom:2px}
 </style>
 </head>
 <body>
 <canvas id="game-canvas"></canvas>
+<div id="scanlines"></div>
 <div id="ui-layer">
   <div id="hud">
-    <div id="hud-bars">
-      <div class="bar-container"><div class="bar-fill hp-fill" id="hp-bar"></div><div class="bar-text" id="hp-text">100/100</div></div>
-      <div class="bar-container"><div class="bar-fill xp-fill" id="xp-bar"></div><div class="bar-text" id="xp-text">0/100</div></div>
-      <span id="hud-credits">Credits: 0</span>
-      <span id="hud-level" style="color:#00ffcc;font-size:14px">Lv.1</span>
+    <div class="hud-left">
+      <div id="hud-name" style="color:#f0f;margin-bottom:4px">Player</div>
+      <div>HP</div><div class="hud-bar hp-bar"><div class="hp-fill hud-bar-fill" id="hp-fill"></div></div>
+      <div>XP</div><div class="hud-bar xp-bar"><div class="xp-fill hud-bar-fill" id="xp-fill"></div></div>
+      <div id="hud-level" style="font-size:12px;color:#0f0">Lv 1</div>
     </div>
-    <div id="hud-phase">Phase 1</div>
-    <canvas id="hud-minimap" width="150" height="150"></canvas>
-    <div id="hud-controls">WASD:Move Click:Attack E:Interact H:Hack I:Inventory ESC:Menu</div>
+    <div class="hud-right">
+      <div id="hud-credits" style="color:#ff0">Credits: 0</div>
+      <div id="hud-zone" style="color:#f0f;font-size:12px">Downtown</div>
+    </div>
   </div>
+  <div id="boss-hp"><div class="boss-name" id="boss-name">BOSS</div><div class="hud-bar"><div class="hud-bar-fill" id="boss-hp-fill"></div></div></div>
   <div id="dialog-box"><div id="dialog-speaker"></div><div id="dialog-text"></div><div id="dialog-options"></div></div>
   <div id="notification"></div>
-  <div id="menu-screen">
-    <h1>THE SIMULATION</h1>
-    <h2>A Cyberpunk RPG</h2>
-    <button class="menu-btn" onclick="startNewGame()">New Game</button>
-    <button class="menu-btn" onclick="loadGame()">Continue</button>
-  </div>
-  <div id="phase1-screen">
-    <h2>[ AWAKENING ]</h2>
-    <p style="color:#888;margin-bottom:15px">Identity configuration detected. Initialize profile.</p>
-    <input class="phase1-input" id="player-name" placeholder="Enter handle..." maxlength="16">
-    <div class="class-select">
-      <div class="class-card" onclick="selectClass('netrunner')"><h3>Netrunner</h3><p>+3 Hacking +1 Speed<br>Master of the digital realm</p></div>
-      <div class="class-card" onclick="selectClass('samurai')"><h3>Street Samurai</h3><p>+3 Attack +1 Defense<br>Blade and chrome</p></div>
-      <div class="class-card" onclick="selectClass('techie')"><h3>Techie</h3><p>+2 Defense +2 Hacking<br>Build. Repair. Upgrade.</p></div>
-    </div>
-    <div id="stat-points">Stat Points: 5</div>
-    <div id="stat-alloc">
-      <div class="stat-row"><button onclick="adjStat('atk',-1)">-</button> ATK: <span id="s-atk">1</span> <button onclick="adjStat('atk',1)">+</button></div>
-      <div class="stat-row"><button onclick="adjStat('def',-1)">-</button> DEF: <span id="s-def">1</span> <button onclick="adjStat('def',1)">+</button></div>
-      <div class="stat-row"><button onclick="adjStat('hack',-1)">-</button> HACK: <span id="s-hack">1</span> <button onclick="adjStat('hack',1)">+</button></div>
-      <div class="stat-row"><button onclick="adjStat('spd',-1)">-</button> SPD: <span id="s-spd">1</span> <button onclick="adjStat('spd',1)">+</button></div>
-    </div>
-    <button class="menu-btn" onclick="confirmCharacter()" style="margin-top:15px">Jack In</button>
-  </div>
-  <div id="inventory-screen">
-    <h2 style="color:#00ffcc;margin:20px">[ INVENTORY ]</h2>
-    <div id="player-stats-display" style="color:#ccc;margin-bottom:10px"></div>
-    <div class="inv-grid" id="inv-grid"></div>
-    <button class="menu-btn" onclick="toggleInventory()">Close</button>
-  </div>
-  <div id="hack-screen">
-    <h2 style="color:#00ffcc;margin:10px">[ SYSTEM BREACH ]</h2>
-    <div id="hack-timer">10.0</div>
-    <div id="hack-status">Match the symbols</div>
-    <div id="hack-grid"></div>
-    <button class="menu-btn" onclick="cancelHack()">Abort</button>
-  </div>
-  <div id="shop-screen">
-    <h2 style="color:#ffcc00;margin:20px">[ SHOP ]</h2>
-    <div id="shop-items"></div>
-    <button class="menu-btn" onclick="closeShop()">Leave</button>
-  </div>
-  <div id="game-over">
-    <h1>FLATLINED</h1>
-    <p style="color:#888;margin-bottom:20px">Connection terminated.</p>
-    <button class="menu-btn" onclick="location.reload()">Reboot</button>
-  </div>
+  <div id="combat-log"></div>
+  <div id="ability-bar"></div>
+  <div id="overlay-screen"></div>
+  <div id="inventory-panel"><div class="panel-inner" id="inv-inner"></div></div>
+  <div id="map-panel"><div class="panel-inner" id="map-inner"></div></div>
+  <div id="menu-panel"><div class="panel-inner" id="menu-inner"></div></div>
+  <div id="hack-minigame"></div>
 </div>
-<div class="scanline"></div>
 <script>
+'use strict';
 // ============================================================
-// THE SIMULATION - Core Engine
+// CORE ENGINE
 // ============================================================
-
 const canvas = document.getElementById('game-canvas');
 const ctx = canvas.getContext('2d');
-const minimapCanvas = document.getElementById('hud-minimap');
-const minimapCtx = minimapCanvas.getContext('2d');
+const MAX_DELTA = 50;
+const MAX_ENEMIES = 50;
+const MAX_PARTICLES = 100;
+const WAVE_THRESHOLD = 10;
 
-// --- CONSTANTS ---
-const TILE = 32;
-const MAX_DELTA = 50; // CRITICAL: prevents death spiral in phase 4
-const MAX_ENTITIES = 50; // CRITICAL: entity budget for phase 4
-const MAX_PARTICLES = 100; // CRITICAL: particle budget
-const ZONE_W = 40;
-const ZONE_H = 30;
-const ATTACK_COOLDOWN = 400;
-const ENEMY_COLORS = { drone: '#ff4444', enforcer: '#ff8800', hacker: '#cc00ff', boss: '#ff0040' };
-const NPC_COLOR = '#00ff88';
+function resizeCanvas(){canvas.width=window.innerWidth;canvas.height=window.innerHeight}
+window.addEventListener('resize',resizeCanvas);resizeCanvas();
 
-// --- GAME STATE ---
-let G = {
-  phase: 0, running: false, paused: false, time: 0,
-  player: {
-    name: 'Runner', cls: 'netrunner', level: 1, xp: 0, xpNext: 100,
-    hp: 100, maxHp: 100, credits: 50,
-    stats: { atk: 1, def: 1, hack: 1, spd: 1 },
-    x: 400, y: 400, vx: 0, vy: 0, speed: 150,
-    inventory: [], equipped: null,
-    attackTimer: 0, facing: 0, invincible: 0
+// Input
+const keys={};
+let mouseX=0,mouseY=0,mouseDown=false,mouseClicked=false;
+window.addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true;if(['i','m','escape','e','h'].includes(e.key.toLowerCase()))e.preventDefault()});
+window.addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false});
+canvas.addEventListener('mousemove',e=>{mouseX=e.clientX;mouseY=e.clientY});
+canvas.addEventListener('mousedown',e=>{mouseDown=true;mouseClicked=true});
+canvas.addEventListener('mouseup',e=>{mouseDown=false});
+
+// Object pools
+const entityPool=[];
+const particlePool=[];
+function getEntity(){return entityPool.pop()||{}}
+function releaseEntity(e){e.active=false;entityPool.push(e)}
+function getParticle(){return particlePool.pop()||{}}
+function releaseParticle(p){p.active=false;particlePool.push(p)}
+
+// Game state
+const G={
+  phase:0, running:false, frameCount:0, lastTime:0,
+  player:null, entities:[], particles:[], timers:[],
+  camera:{x:0,y:0},
+  world:{width:2000,height:2000},
+  zone:'downtown',
+  zones:{
+    downtown:{name:'Downtown',color:'#0af',x:0,y:0,w:2000,h:2000,
+      npcs:[{x:300,y:300,name:'Fixer',dialog:'fixerDialog',sprite:'npc'},{x:800,y:400,name:'Info Broker',dialog:'infoBrokerDialog',sprite:'npc'}],
+      terminals:[{x:600,y:600,hacked:false}],
+      shopItems:[{name:'Stim Pack',type:'consumable',stat:'hp',val:30,cost:50},{name:'Nano Blade',type:'weapon',stat:'attack',val:5,cost:200},{name:'ICE Breaker',type:'tool',stat:'hacking',val:3,cost:150}]},
+    slums:{name:'Slums',color:'#f80',x:-2000,y:0,w:2000,h:2000,
+      npcs:[{x:400,y:500,name:'Street Doc',dialog:'streetDocDialog',sprite:'npc'}],
+      terminals:[{x:900,y:300,hacked:false}],
+      shopItems:[{name:'Medkit',type:'consumable',stat:'hp',val:50,cost:80},{name:'Shock Gloves',type:'weapon',stat:'attack',val:3,cost:100}]},
+    corporate:{name:'Corporate District',color:'#f0f',x:0,y:-2000,w:2000,h:2000,
+      npcs:[{x:500,y:600,name:'Corp Agent',dialog:'corpDialog',sprite:'npc'}],
+      terminals:[{x:700,y:200,hacked:false}],
+      shopItems:[{name:'Cyber Deck v2',type:'tool',stat:'hacking',val:5,cost:300},{name:'Reflex Booster',type:'augment',stat:'speed',val:3,cost:250}]},
+    industrial:{name:'Industrial Zone',color:'#0f0',x:-2000,y:-2000,w:2000,h:2000,
+      npcs:[{x:300,y:800,name:'Mechanic',dialog:'mechDialog',sprite:'npc'}],
+      terminals:[{x:1200,y:500,hacked:false}],
+      shopItems:[{name:'Armor Plating',type:'augment',stat:'defense',val:5,cost:200},{name:'EMP Grenade',type:'consumable',stat:'attack',val:20,cost:120}]}
   },
-  zone: 'downtown',
-  zones: {},
-  enemies: [], particles: [], npcs: [], projectiles: [], pickups: [],
-  missions: [], activeMission: null, completedMissions: [],
-  phase4: { wave: 0, maxWaves: 8, waveTimer: 0, enemiesDefeated: 0, zonesSecured: 0, totalToSecure: 3, bossSpawned: false },
-  phase5: { bossHp: 500, bossMaxHp: 500, bossPhase: 0, bossTimer: 0 },
-  keys: {}, mouse: { x: 0, y: 0, down: false },
-  camera: { x: 0, y: 0 },
-  frameCount: 0,
-  dialogQueue: [], currentDialog: null,
-  notifications: [],
-  shopOpen: false, hackActive: false, inventoryOpen: false
+  missions:[],
+  activeMission:null,
+  inventory:[],
+  credits:100,
+  xp:0,xpNext:100,level:1,
+  dialogQueue:[],
+  notifications:[],
+  wave:0,waveEnemies:0,
+  bossHP:0,bossMaxHP:0,bossName:'',
+  hackCallback:null,
+  shopOpen:false,currentShop:null,
+  saves:{}
 };
 
-// --- OBJECT POOLS ---
-// Pre-allocate to avoid GC pressure in phase 4
-const enemyPool = [];
-const particlePool = [];
-const projPool = [];
-for (let i = 0; i < MAX_ENTITIES; i++) enemyPool.push({ active: false, type: '', x: 0, y: 0, hp: 0, maxHp: 0, vx: 0, vy: 0, aiTimer: 0, aiState: 'idle', attackTimer: 0, color: '#f00', dmg: 5, speed: 60 });
-for (let i = 0; i < MAX_PARTICLES; i++) particlePool.push({ active: false, x: 0, y: 0, vx: 0, vy: 0, life: 0, maxLife: 0, color: '#0fc', size: 3 });
-for (let i = 0; i < 30; i++) projPool.push({ active: false, x: 0, y: 0, vx: 0, vy: 0, life: 0, dmg: 0, friendly: true, color: '#0fc' });
-
-function getEnemy() { for (let e of enemyPool) if (!e.active) return e; return null; }
-function getParticle() { 
-  for (let p of particlePool) if (!p.active) return p; 
-  // Recycle oldest if full
-  let oldest = particlePool[0]; 
-  for (let p of particlePool) if (p.life > oldest.life) oldest = p;
-  oldest.active = false; return oldest;
+// Stats template
+function makePlayer(name,cls){
+  const bases={
+    netrunner:{hp:80,maxHp:80,attack:8,defense:4,hacking:12,speed:5},
+    'street samurai':{hp:120,maxHp:120,attack:14,defense:8,hacking:3,speed:7},
+    techie:{hp:100,maxHp:100,attack:10,defense:6,hacking:8,speed:5}
+  };
+  const b=bases[cls]||bases.netrunner;
+  return{name,cls,x:400,y:400,w:24,h:32,...b,
+    cooldowns:{melee:0,ranged:0,cyber:0},
+    abilities:getAbilities(cls),
+    facing:1,attacking:false,attackTimer:0,invuln:0,
+    velX:0,velY:0};
 }
-function getProjectile() { for (let p of projPool) if (!p.active) return p; return null; }
-
-// --- ZONE GENERATION ---
-function generateZone(name) {
-  const tiles = [];
-  for (let y = 0; y < ZONE_H; y++) {
-    tiles[y] = [];
-    for (let x = 0; x < ZONE_W; x++) {
-      // Borders are walls
-      if (x === 0 || y === 0 || x === ZONE_W-1 || y === ZONE_H-1) { tiles[y][x] = 1; continue; }
-      // Zone exits (gaps in walls)
-      if (x === Math.floor(ZONE_W/2) && (y === 0 || y === ZONE_H-1)) { tiles[y][x] = 0; continue; }
-      if (y === Math.floor(ZONE_H/2) && (x === 0 || x === ZONE_W-1)) { tiles[y][x] = 0; continue; }
-      // Random buildings/obstacles based on zone
-      let wallChance = name === 'industrial' ? 0.15 : name === 'slums' ? 0.12 : name === 'corporate' ? 0.1 : 0.08;
-      tiles[y][x] = Math.random() < wallChance ? 1 : 0;
-    }
-  }
-  // Ensure exits are open
-  tiles[0][Math.floor(ZONE_W/2)] = 0;
-  tiles[ZONE_H-1][Math.floor(ZONE_W/2)] = 0;
-  tiles[Math.floor(ZONE_H/2)][0] = 0;
-  tiles[Math.floor(ZONE_H/2)][ZONE_W-1] = 0;
-  // Clear spawn area
-  for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
-    let sy = Math.floor(ZONE_H/2)+dy, sx = Math.floor(ZONE_W/2)+dx;
-    if (sy > 0 && sy < ZONE_H-1 && sx > 0 && sx < ZONE_W-1) tiles[sy][sx] = 0;
-  }
-  return tiles;
+function getAbilities(cls){
+  const common=[{name:'Melee',key:'LMB',cd:500,dmgMul:1,range:50,type:'melee'},
+    {name:'Ranged',key:'RMB',cd:1000,dmgMul:0.8,range:300,type:'ranged'}];
+  const specials={
+    netrunner:[{name:'Neural Spike',key:'Q',cd:3000,dmgMul:2,range:200,type:'cyber'}],
+    'street samurai':[{name:'Blade Storm',key:'Q',cd:4000,dmgMul:2.5,range:80,type:'melee'}],
+    techie:[{name:'Turret Deploy',key:'Q',cd:5000,dmgMul:1.5,range:250,type:'ranged'}]
+  };
+  return[...common,...(specials[cls]||specials.netrunner)];
 }
 
-const ZONE_CONNECTIONS = {
-  downtown: { north: null, south: 'slums', east: 'corporate', west: null },
-  slums: { north: 'downtown', south: null, east: 'industrial', west: null },
-  corporate: { north: null, south: 'industrial', east: null, west: 'downtown' },
-  industrial: { north: 'corporate', south: null, east: null, west: 'slums' }
-};
-
-const ZONE_COLORS = {
-  downtown: { floor: '#0d0d1a', wall: '#1a1a3e', accent: '#00ffcc' },
-  slums: { floor: '#0d0a0a', wall: '#2e1a1a', accent: '#ff4444' },
-  corporate: { floor: '#0a0d0f', wall: '#1a2a3e', accent: '#00ccff' },
-  industrial: { floor: '#0d0d0a', wall: '#2e2e1a', accent: '#ffcc00' }
-};
-
-function initZones() {
-  for (let z of ['downtown', 'slums', 'corporate', 'industrial']) {
-    G.zones[z] = generateZone(z);
-  }
-}
-
-// --- RESIZE ---
-function resize() {
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-}
-window.addEventListener('resize', resize);
-resize();
-
-// --- INPUT ---
-window.addEventListener('keydown', e => {
-  G.keys[e.key.toLowerCase()] = true;
-  if (e.key === 'i' && G.running && !G.hackActive) toggleInventory();
-  if (e.key === 'e' && G.running) interact();
-  if (e.key === 'h' && G.running && !G.hackActive) tryHack();
-  if (e.key === 'Escape') {
-    if (G.inventoryOpen) toggleInventory();
-    else if (G.shopOpen) closeShop();
-    else if (G.hackActive) cancelHack();
-  }
-});
-window.addEventListener('keyup', e => { G.keys[e.key.toLowerCase()] = false; });
-canvas.addEventListener('mousemove', e => { G.mouse.x = e.clientX; G.mouse.y = e.clientY; });
-canvas.addEventListener('mousedown', e => { G.mouse.down = true; if (G.running && !G.paused) playerAttack(); });
-canvas.addEventListener('mouseup', e => { G.mouse.down = false; });
-canvas.addEventListener('contextmenu', e => e.preventDefault());
 // ============================================================
-// GAME SYSTEMS - Combat, Spawning, Hacking, Missions
+// UTILITY FUNCTIONS
 // ============================================================
+function dist(a,b){return Math.hypot(a.x-b.x,a.y-b.y)}
+function clamp(v,mn,mx){return Math.max(mn,Math.min(mx,v))}
+function rand(a,b){return Math.random()*(b-a)+a}
+function randInt(a,b){return Math.floor(rand(a,b+1))}
+function lerp(a,b,t){return a+(b-a)*t}
 
-// --- SPAWN ENEMIES ---
-function spawnEnemy(type, x, y) {
-  let e = getEnemy();
-  if (!e) return null; // Budget full - PREVENTS PHASE 4 FREEZE
-  e.active = true;
-  e.type = type;
-  e.x = x; e.y = y; e.vx = 0; e.vy = 0;
-  e.aiTimer = 0; e.aiState = 'idle'; e.attackTimer = 0;
-  if (type === 'drone') { e.hp = 30; e.maxHp = 30; e.dmg = 5; e.speed = 70; e.color = ENEMY_COLORS.drone; }
-  else if (type === 'enforcer') { e.hp = 60; e.maxHp = 60; e.dmg = 10; e.speed = 50; e.color = ENEMY_COLORS.enforcer; }
-  else if (type === 'hacker') { e.hp = 25; e.maxHp = 25; e.dmg = 15; e.speed = 40; e.color = ENEMY_COLORS.hacker; }
-  else if (type === 'boss') { e.hp = 300; e.maxHp = 300; e.dmg = 20; e.speed = 35; e.color = ENEMY_COLORS.boss; }
+function notify(text,dur=2000){
+  const el=document.getElementById('notification');
+  el.textContent=text;el.style.opacity='1';
+  setTimeout(()=>el.style.opacity='0',dur);
+}
+
+function addLog(text,cls='log-info'){
+  const log=document.getElementById('combat-log');
+  const d=document.createElement('div');d.className=cls;d.textContent=text;
+  log.appendChild(d);log.scrollTop=log.scrollHeight;
+  if(log.children.length>50)log.removeChild(log.firstChild);
+}
+
+function spawnParticle(x,y,color,life=500,vx,vy){
+  if(G.particles.filter(p=>p.active).length>=MAX_PARTICLES){
+    const oldest=G.particles.find(p=>p.active);
+    if(oldest)oldest.active=false;
+  }
+  let p=G.particles.find(pp=>!pp.active);
+  if(!p){p=getParticle();G.particles.push(p)}
+  p.x=x;p.y=y;p.vx=vx||rand(-2,2);p.vy=vy||rand(-2,2);
+  p.color=color;p.life=life;p.maxLife=life;p.active=true;p.size=rand(2,5);
+}
+
+function spawnEnemy(x,y,type,zone){
+  const active=G.entities.filter(e=>e.active&&e.type==='enemy');
+  if(active.length>=MAX_ENEMIES)return null;
+  let e=G.entities.find(en=>!en.active&&en.type==='enemy');
+  if(!e){e=getEntity();G.entities.push(e)}
+  const templates={
+    grunt:{hp:30,maxHp:30,attack:5,defense:2,speed:1.5,w:20,h:28,color:'#f44',xpVal:15,creditVal:10},
+    enforcer:{hp:60,maxHp:60,attack:10,defense:5,speed:1,w:24,h:32,color:'#f80',xpVal:30,creditVal:25},
+    drone:{hp:20,maxHp:20,attack:8,defense:1,speed:3,w:16,h:16,color:'#ff0',xpVal:20,creditVal:15},
+    cyber:{hp:50,maxHp:50,attack:12,defense:4,speed:2,w:22,h:30,color:'#f0f',xpVal:35,creditVal:30},
+    boss:{hp:500,maxHp:500,attack:20,defense:10,speed:1.2,w:40,h:48,color:'#f00',xpVal:200,creditVal:500}
+  };
+  const t=templates[type]||templates.grunt;
+  Object.assign(e,t,{x,y,type:'enemy',enemyType:type,active:true,
+    zone:zone||G.zone,aiTimer:0,aiState:'patrol',
+    targetX:x+rand(-100,100),targetY:y+rand(-100,100),
+    attackCd:0,hitFlash:0,facing:1});
   return e;
 }
 
-function spawnParticle(x, y, color, count) {
-  for (let i = 0; i < count; i++) {
-    let p = getParticle();
-    if (!p) return;
-    p.active = true; p.x = x; p.y = y;
-    let angle = Math.random() * Math.PI * 2;
-    let speed = 30 + Math.random() * 80;
-    p.vx = Math.cos(angle) * speed; p.vy = Math.sin(angle) * speed;
-    p.life = 0; p.maxLife = 0.3 + Math.random() * 0.5;
-    p.color = color || '#0fc'; p.size = 2 + Math.random() * 3;
+function damageEntity(target,amount,source){
+  const def=target.defense||0;
+  const dmg=Math.max(1,Math.round(amount-def*0.5));
+  target.hp-=dmg;target.hitFlash=150;
+  for(let i=0;i<5;i++)spawnParticle(target.x,target.y,'#f44',300);
+  if(target===G.player){
+    addLog(`You take ${dmg} damage!`,'log-dmg');
+  }else{
+    addLog(`Hit for ${dmg} damage!`,'log-dmg');
+  }
+  if(target.hp<=0){
+    target.hp=0;
+    if(target!==G.player){
+      target.active=false;
+      G.xp+=target.xpVal||10;
+      G.credits+=target.creditVal||5;
+      for(let i=0;i<10;i++)spawnParticle(target.x,target.y,target.color,500);
+      addLog(`Enemy destroyed! +${target.xpVal}XP +${target.creditVal}cr`,'log-info');
+      checkLevelUp();
+      if(G.activeMission)checkMissionProgress('kill');
+    }else{
+      handlePlayerDeath();
+    }
+  }
+  return dmg;
+}
+
+function checkLevelUp(){
+  while(G.xp>=G.xpNext){
+    G.xp-=G.xpNext;G.level++;G.xpNext=Math.floor(G.xpNext*1.5);
+    G.player.maxHp+=10;G.player.hp=G.player.maxHp;
+    G.player.attack+=2;G.player.defense+=1;G.player.hacking+=1;G.player.speed+=0.3;
+    notify(`LEVEL UP! Level ${G.level}`);
+    addLog(`Level ${G.level}! Stats increased.`,'log-info');
   }
 }
 
-function fireProjectile(x, y, tx, ty, dmg, friendly, color) {
-  let p = getProjectile();
-  if (!p) return;
-  let angle = Math.atan2(ty - y, tx - x);
-  p.active = true; p.x = x; p.y = y;
-  p.vx = Math.cos(angle) * 300; p.vy = Math.sin(angle) * 300;
-  p.life = 2; p.dmg = dmg; p.friendly = friendly; p.color = color || '#0fc';
+function handlePlayerDeath(){
+  notify('SYSTEM FAILURE - Respawning...');
+  setTimeout(()=>{
+    G.player.hp=G.player.maxHp;
+    G.player.x=400;G.player.y=400;G.player.invuln=2000;
+    G.credits=Math.max(0,G.credits-50);
+  },1500);
 }
 
-// --- PLAYER ATTACK ---
-function playerAttack() {
-  if (G.player.attackTimer > 0 || G.paused || G.hackActive) return;
-  G.player.attackTimer = ATTACK_COOLDOWN;
-  let wx = G.mouse.x + G.camera.x - canvas.width/2;
-  let wy = G.mouse.y + G.camera.y - canvas.height/2;
-  let dmg = 10 + G.player.stats.atk * 3 + (G.player.level - 1) * 2;
-  if (G.player.equipped && G.player.equipped.type === 'ranged') {
-    fireProjectile(G.player.x, G.player.y, wx, wy, dmg, true, '#00ffcc');
-    spawnParticle(G.player.x, G.player.y, '#00ffcc', 3);
-  } else {
-    // Melee: hit enemies in range
-    let range = 50;
-    for (let e of enemyPool) {
-      if (!e.active) continue;
-      let dx = e.x - G.player.x, dy = e.y - G.player.y;
-      if (Math.sqrt(dx*dx+dy*dy) < range) {
-        damageEnemy(e, dmg);
+function saveGame(){
+  const data={player:G.player,credits:G.credits,xp:G.xp,xpNext:G.xpNext,
+    level:G.level,phase:G.phase,zone:G.zone,inventory:G.inventory,
+    missions:G.missions.map(m=>({id:m.id,complete:m.complete}))};
+  localStorage.setItem('simulation_save',JSON.stringify(data));
+}
+
+function loadGame(){
+  try{
+    const d=JSON.parse(localStorage.getItem('simulation_save'));
+    if(d){Object.assign(G.player,d.player);G.credits=d.credits;G.xp=d.xp;
+      G.xpNext=d.xpNext;G.level=d.level;G.zone=d.zone;G.inventory=d.inventory||[];return true}
+  }catch(e){}return false;
+}
+
+// Camera
+function updateCamera(){
+  const p=G.player;if(!p)return;
+  G.camera.x=lerp(G.camera.x,p.x-canvas.width/2,0.1);
+  G.camera.y=lerp(G.camera.y,p.y-canvas.height/2,0.1);
+}
+
+function worldToScreen(wx,wy){return{x:wx-G.camera.x,y:wy-G.camera.y}}
+function isOnScreen(x,y,margin=100){
+  const s=worldToScreen(x,y);
+  return s.x>-margin&&s.x<canvas.width+margin&&s.y>-margin&&s.y<canvas.height+margin;
+}
+
+// ============================================================
+// PHASE MANAGEMENT
+// ============================================================
+const phases=[];
+let currentPhase=null;
+
+function setPhase(idx){
+  if(currentPhase&&currentPhase.exit)currentPhase.exit();
+  // Cleanup
+  G.entities.forEach(e=>{e.active=false;entityPool.push(e)});
+  G.entities.length=0;
+  G.particles.forEach(p=>{p.active=false;particlePool.push(p)});
+  G.particles.length=0;
+  G.timers.forEach(t=>clearTimeout(t));G.timers.length=0;
+  mouseClicked=false;
+  G.phase=idx;
+  currentPhase=phases[idx];
+  if(currentPhase&&currentPhase.enter)currentPhase.enter();
+  saveGame();
+}
+// ============================================================
+// PHASE 0: AWAKENING - Character Creation
+// ============================================================
+phases[0]={
+  enter(){
+    G.running=false;
+    document.getElementById('hud').style.display='none';
+    document.getElementById('combat-log').style.display='none';
+    document.getElementById('ability-bar').style.display='none';
+    const ov=document.getElementById('overlay-screen');
+    ov.style.display='flex';
+    let selectedClass='netrunner';
+    let statPoints=5;
+    let bonusStats={hp:0,attack:0,defense:0,hacking:0,speed:0};
+    ov.innerHTML=`
+      <div class="overlay-panel">
+        <h1>THE SIMULATION</h1>
+        <p style="text-align:center;color:#888;margin-bottom:20px">Welcome to the machine. Who are you?</p>
+        <div style="margin:10px 0"><label style="color:#0f0">Handle:</label>
+          <input type="text" id="char-name" value="Ghost" maxlength="16" style="margin-top:5px"></div>
+        <h2>Choose Your Path</h2>
+        <div style="text-align:center" id="class-select">
+          <div class="class-card selected" data-cls="netrunner"><h3>Netrunner</h3><p>Master hacker. High hacking, moderate combat. Neural attacks bypass armor.</p></div>
+          <div class="class-card" data-cls="street samurai"><h3>Street Samurai</h3><p>Combat specialist. High HP and attack. Blade storm devastates nearby foes.</p></div>
+          <div class="class-card" data-cls="techie"><h3>Techie</h3><p>Gadget expert. Balanced stats. Deploy turrets for ranged support.</p></div>
+        </div>
+        <h2 style="margin-top:15px">Allocate Stats <span id="stat-pts" style="color:#0f0">(${statPoints} points)</span></h2>
+        <div id="stat-alloc">
+          ${['hp','attack','defense','hacking','speed'].map(s=>`
+            <div class="stat-row"><label>${s.toUpperCase()}</label>
+            <button class="stat-btn" data-stat="${s}" data-dir="-1">-</button>
+            <span id="bonus-${s}">+0</span>
+            <button class="stat-btn" data-stat="${s}" data-dir="1">+</button></div>`).join('')}
+        </div>
+        <div style="text-align:center;margin-top:20px">
+          <button class="btn btn-magenta" id="start-btn">JACK IN</button>
+        </div>
+      </div>`;
+    // Class selection
+    ov.querySelectorAll('.class-card').forEach(card=>{
+      card.addEventListener('click',()=>{
+        ov.querySelectorAll('.class-card').forEach(c=>c.classList.remove('selected'));
+        card.classList.add('selected');
+        selectedClass=card.dataset.cls;
+      });
+    });
+    // Stat allocation
+    ov.querySelectorAll('.stat-btn').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        const s=btn.dataset.stat;const dir=parseInt(btn.dataset.dir);
+        if(dir>0&&statPoints<=0)return;
+        if(dir<0&&bonusStats[s]<=0)return;
+        bonusStats[s]+=dir;statPoints-=dir;
+        document.getElementById('bonus-'+s).textContent='+'+bonusStats[s];
+        document.getElementById('stat-pts').textContent=`(${statPoints} points)`;
+      });
+    });
+    // Start
+    document.getElementById('start-btn').addEventListener('click',()=>{
+      const name=document.getElementById('char-name').value.trim()||'Ghost';
+      G.player=makePlayer(name,selectedClass);
+      G.player.hp+=bonusStats.hp*5;G.player.maxHp+=bonusStats.hp*5;
+      G.player.attack+=bonusStats.attack*2;G.player.defense+=bonusStats.defense*2;
+      G.player.hacking+=bonusStats.hacking*2;G.player.speed+=bonusStats.speed;
+      G.inventory=[];G.credits=100;G.xp=0;G.level=1;G.xpNext=100;
+      setPhase(1);
+    });
+  },
+  exit(){document.getElementById('overlay-screen').style.display='none'}
+};
+
+// ============================================================
+// PHASE 1: FIRST JACK-IN - Tutorial
+// ============================================================
+phases[1]={
+  tutStep:0,
+  enter(){
+    const self=this;self.tutStep=0;
+    G.running=true;G.zone='downtown';
+    G.player.x=400;G.player.y=400;
+    showHUD();
+    G.world={width:1200,height:1000};
+    // Tutorial steps
+    self.steps=[
+      {msg:'Use WASD to move around.',check:()=>keys.w||keys.a||keys.s||keys.d},
+      {msg:'Click to attack! Defeat the training drone.',setup:()=>{
+        spawnEnemy(600,400,'grunt','downtown');
+      },check:()=>G.entities.filter(e=>e.active&&e.type==='enemy').length===0},
+      {msg:'Press E near the terminal to interact. Then press H to hack it.',setup:()=>{
+        G.zones.downtown.terminals[0].hacked=false;
+        self.terminal={x:800,y:400,hacked:false};
+      },check:()=>self.terminal&&self.terminal.hacked},
+      {msg:'Tutorial complete! Entering Neo-Tokyo...',check:()=>'auto'}
+    ];
+    self.advanceStep();
+  },
+  advanceStep(){
+    const self=this;
+    if(self.tutStep>=self.steps.length){setPhase(2);return}
+    const step=self.steps[self.tutStep];
+    showDialog('SYSTEM',step.msg);
+    if(step.setup)step.setup();
+  },
+  update(dt){
+    const self=phases[1];
+    const step=self.steps[self.tutStep];
+    if(!step)return;
+    if(step.check()==='auto'||(step.check()===true)){
+      self.tutStep++;
+      if(self.tutStep>=self.steps.length){
+        setTimeout(()=>setPhase(2),1500);
+      }else{
+        self.advanceStep();
       }
     }
-    spawnParticle(G.player.x, G.player.y, '#ff00ff', 5);
-  }
-  G.player.facing = Math.atan2(wy - G.player.y, wx - G.player.x);
-}
-
-function damageEnemy(e, dmg) {
-  e.hp -= dmg;
-  spawnParticle(e.x, e.y, e.color, 4);
-  if (e.hp <= 0) {
-    e.active = false;
-    let xpGain = e.type === 'boss' ? 200 : e.type === 'enforcer' ? 30 : e.type === 'hacker' ? 25 : 15;
-    let creditGain = e.type === 'boss' ? 100 : 5 + Math.floor(Math.random() * 10);
-    G.player.xp += xpGain;
-    G.player.credits += creditGain;
-    // Drop chance
-    if (Math.random() < 0.15) {
-      G.pickups.push({ x: e.x, y: e.y, type: 'hp', value: 20, timer: 15 });
+    // Hack terminal check
+    if(self.terminal&&!self.terminal.hacked){
+      const td=dist(G.player,self.terminal);
+      if(td<60&&keys.e){
+        keys.e=false;
+        showDialog('TERMINAL','Hack this terminal? Press H.');
+      }
+      if(td<60&&keys.h){
+        keys.h=false;
+        startHackMinigame(3,()=>{self.terminal.hacked=true;notify('TERMINAL HACKED!')});
+      }
     }
-    if (G.phase === 4) G.phase4.enemiesDefeated++;
-    checkLevelUp();
-    checkMissionProgress('defeat', e.type);
-    spawnParticle(e.x, e.y, '#ffcc00', 8);
-  }
-}
-
-function damagePlayer(dmg) {
-  if (G.player.invincible > 0) return;
-  let reduced = Math.max(1, dmg - G.player.stats.def);
-  G.player.hp -= reduced;
-  G.player.invincible = 500;
-  spawnParticle(G.player.x, G.player.y, '#ff0040', 6);
-  if (G.player.hp <= 0) {
-    G.player.hp = 0;
-    gameOver();
-  }
-}
-
-function checkLevelUp() {
-  while (G.player.xp >= G.player.xpNext) {
-    G.player.xp -= G.player.xpNext;
-    G.player.level++;
-    G.player.xpNext = Math.floor(G.player.xpNext * 1.5);
-    G.player.maxHp += 10;
-    G.player.hp = G.player.maxHp;
-    notify('LEVEL UP! Level ' + G.player.level);
-  }
-}
-
-// --- ENEMY AI ---
-function updateEnemyAI(e, dt, idx) {
-  if (!e.active) return;
-  let dx = G.player.x - e.x, dy = G.player.y - e.y;
-  let dist = Math.sqrt(dx*dx + dy*dy);
-  
-  // PHASE 4 FIX: Throttle AI for off-screen enemies
-  let onScreen = isOnScreen(e.x, e.y);
-  if (!onScreen && G.frameCount % 4 !== idx % 4) return;
-  
-  e.attackTimer = Math.max(0, e.attackTimer - dt);
-  e.aiTimer += dt;
-  
-  if (dist < 200) {
-    e.aiState = 'chase';
-  } else if (dist > 400) {
-    e.aiState = 'idle';
-  }
-  
-  if (e.aiState === 'chase') {
-    let nx = dx/dist, ny = dy/dist;
-    e.vx = nx * e.speed; e.vy = ny * e.speed;
-    if (dist < 35 && e.attackTimer <= 0) {
-      damagePlayer(e.dmg);
-      e.attackTimer = 1000;
+    updateGameplay(dt);
+  },
+  render(){
+    renderWorld();
+    // Draw tutorial terminal
+    const self=phases[1];
+    if(self.terminal&&!self.terminal.hacked){
+      const s=worldToScreen(self.terminal.x,self.terminal.y);
+      ctx.fillStyle='#0f0';ctx.fillRect(s.x-12,s.y-12,24,24);
+      ctx.strokeStyle='#0ff';ctx.strokeRect(s.x-14,s.y-14,28,28);
+      ctx.fillStyle='#0f0';ctx.font='10px monospace';ctx.textAlign='center';
+      ctx.fillText('TERMINAL',s.x,s.y-18);
     }
-    if (e.type === 'hacker' && dist < 150 && dist > 80 && e.attackTimer <= 0) {
-      fireProjectile(e.x, e.y, G.player.x, G.player.y, e.dmg, false, '#cc00ff');
-      e.attackTimer = 1500;
-    }
-  } else {
-    // Wander
-    if (e.aiTimer > 2) {
-      e.aiTimer = 0;
-      let a = Math.random() * Math.PI * 2;
-      e.vx = Math.cos(a) * e.speed * 0.3;
-      e.vy = Math.sin(a) * e.speed * 0.3;
-    }
-  }
-  
-  // Move with collision
-  let nx = e.x + e.vx * dt/1000;
-  let ny = e.y + e.vy * dt/1000;
-  if (!tileBlocked(nx, ny)) { e.x = nx; e.y = ny; }
-  else { e.vx = 0; e.vy = 0; }
+    renderEntities();renderParticles();renderPlayer();
+  },
+  exit(){hideDialog();G.running=false}
+};
+
+function showHUD(){
+  document.getElementById('hud').style.display='block';
+  document.getElementById('combat-log').style.display='block';
+  document.getElementById('ability-bar').style.display='block';
+  updateHUD();updateAbilityBar();
 }
 
-// --- COLLISION ---
-function tileBlocked(px, py) {
-  let tx = Math.floor(px/TILE), ty = Math.floor(py/TILE);
-  let tiles = G.zones[G.zone];
-  if (!tiles) return true;
-  if (tx < 0 || ty < 0 || tx >= ZONE_W || ty >= ZONE_H) return true;
-  return tiles[ty][tx] === 1;
+function updateHUD(){
+  const p=G.player;if(!p)return;
+  document.getElementById('hud-name').textContent=`${p.name} [${p.cls}]`;
+  document.getElementById('hp-fill').style.width=(p.hp/p.maxHp*100)+'%';
+  document.getElementById('xp-fill').style.width=(G.xp/G.xpNext*100)+'%';
+  document.getElementById('hud-level').textContent=`Lv ${G.level}`;
+  document.getElementById('hud-credits').textContent=`Credits: ${G.credits}`;
+  document.getElementById('hud-zone').textContent=G.zones[G.zone]?G.zones[G.zone].name:'Unknown';
 }
 
-function isOnScreen(x, y) {
-  let sx = x - G.camera.x + canvas.width/2;
-  let sy = y - G.camera.y + canvas.height/2;
-  return sx > -100 && sx < canvas.width+100 && sy > -100 && sy < canvas.height+100;
+function updateAbilityBar(){
+  const bar=document.getElementById('ability-bar');
+  if(!G.player)return;
+  bar.innerHTML=G.player.abilities.map((a,i)=>`
+    <div class="ability-slot" title="${a.name}">
+      ${a.name.substring(0,6)}
+      <div class="ability-cd" id="cd-${i}" style="display:none">0</div>
+      <div class="ability-key">${a.key}</div>
+    </div>`).join('');
 }
 
-// --- HACKING MINI-GAME ---
-const HACK_SYMBOLS = ['@', '#', '$', '%', '&', '*', '!', '?'];
-let hackState = { grid: [], size: 4, matches: 0, needed: 0, timer: 0, maxTime: 10, first: null, locked: false, callback: null };
-
-function startHack(difficulty, callback) {
-  G.hackActive = true;
-  G.paused = true;
-  hackState.callback = callback;
-  hackState.size = difficulty === 'hard' ? 6 : difficulty === 'medium' ? 5 : 4;
-  hackState.maxTime = difficulty === 'hard' ? 8 : difficulty === 'medium' ? 10 : 12;
-  hackState.timer = hackState.maxTime;
-  hackState.matches = 0;
-  hackState.first = null;
-  hackState.locked = false;
-  let total = hackState.size * hackState.size;
-  hackState.needed = total / 2;
-  let symbols = [];
-  for (let i = 0; i < total/2; i++) {
-    let s = HACK_SYMBOLS[i % HACK_SYMBOLS.length];
-    symbols.push(s, s);
-  }
-  // Shuffle
-  for (let i = symbols.length - 1; i > 0; i--) { let j = Math.floor(Math.random()*(i+1)); [symbols[i],symbols[j]]=[symbols[j],symbols[i]]; }
-  hackState.grid = symbols.map(s => ({ symbol: s, revealed: false, matched: false }));
-  renderHackScreen();
-  document.getElementById('hack-screen').style.display = 'flex';
-}
-
-function renderHackScreen() {
-  let grid = document.getElementById('hack-grid');
-  grid.style.gridTemplateColumns = `repeat(${hackState.size}, 50px)`;
-  grid.innerHTML = '';
-  hackState.grid.forEach((cell, i) => {
-    let div = document.createElement('div');
-    div.className = 'hack-cell' + (cell.matched ? ' matched' : '');
-    div.textContent = (cell.revealed || cell.matched) ? cell.symbol : '?';
-    div.onclick = () => hackClick(i);
-    grid.appendChild(div);
-  });
-  document.getElementById('hack-timer').textContent = hackState.timer.toFixed(1);
-}
-
-function hackClick(idx) {
-  if (hackState.locked) return;
-  let cell = hackState.grid[idx];
-  if (cell.revealed || cell.matched) return;
-  cell.revealed = true;
-  renderHackScreen();
-  if (!hackState.first && hackState.first !== 0) {
-    hackState.first = idx;
-  } else {
-    hackState.locked = true;
-    let first = hackState.grid[hackState.first];
-    if (first.symbol === cell.symbol) {
-      first.matched = true; cell.matched = true;
-      hackState.matches++;
-      hackState.first = null;
-      hackState.locked = false;
-      renderHackScreen();
-      if (hackState.matches >= hackState.needed) hackSuccess();
-    } else {
-      setTimeout(() => {
-        first.revealed = false; cell.revealed = false;
-        hackState.first = null;
-        hackState.locked = false;
-        renderHackScreen();
-      }, 500);
-    }
-  }
-}
-
-function hackSuccess() {
-  document.getElementById('hack-status').textContent = 'ACCESS GRANTED';
-  document.getElementById('hack-status').style.color = '#00ffcc';
-  setTimeout(() => {
-    document.getElementById('hack-screen').style.display = 'none';
-    G.hackActive = false; G.paused = false;
-    notify('Hack successful!');
-    if (hackState.callback) hackState.callback(true);
-    checkMissionProgress('hack', 'terminal');
-  }, 800);
-}
-
-function hackFail() {
-  document.getElementById('hack-status').textContent = 'ACCESS DENIED';
-  document.getElementById('hack-status').style.color = '#ff0040';
-  setTimeout(() => {
-    document.getElementById('hack-screen').style.display = 'none';
-    G.hackActive = false; G.paused = false;
-    damagePlayer(15);
-    notify('Hack failed! Neural feedback!');
-    if (hackState.callback) hackState.callback(false);
-  }, 800);
-}
-
-function cancelHack() {
-  document.getElementById('hack-screen').style.display = 'none';
-  G.hackActive = false; G.paused = false;
-}
-
-function tryHack() {
-  // Check for nearby hackable terminals (NPCs with hack type)
-  for (let n of G.npcs) {
-    if (n.type !== 'terminal') continue;
-    let dx = n.x - G.player.x, dy = n.y - G.player.y;
-    if (Math.sqrt(dx*dx+dy*dy) < 60) {
-      let diff = G.phase >= 4 ? 'hard' : G.phase >= 3 ? 'medium' : 'easy';
-      startHack(diff, (success) => {
-        if (success) {
-          n.hacked = true;
-          G.player.credits += 25;
-          if (G.phase === 4) {
-            G.phase4.zonesSecured++;
-            if (G.phase4.zonesSecured >= G.phase4.totalToSecure) notify('All zones secured! Head to the Core!');
-          }
-        }
-      });
-      return;
-    }
-  }
-  notify('No hackable terminal nearby.');
-}
-
-// --- INTERACTION ---
-function interact() {
-  for (let n of G.npcs) {
-    let dx = n.x - G.player.x, dy = n.y - G.player.y;
-    if (Math.sqrt(dx*dx+dy*dy) < 60) {
-      if (n.type === 'shop') { openShop(n); return; }
-      if (n.type === 'mission') { offerMission(n); return; }
-      if (n.dialog) { showDialog(n.name, n.dialog); return; }
-    }
-  }
-}
-
-// --- DIALOG ---
-function showDialog(speaker, text, options) {
-  let box = document.getElementById('dialog-box');
-  document.getElementById('dialog-speaker').textContent = speaker;
-  document.getElementById('dialog-text').textContent = text;
-  let optDiv = document.getElementById('dialog-options');
-  optDiv.innerHTML = '';
-  if (options) {
-    options.forEach(o => {
-      let d = document.createElement('div');
-      d.className = 'dialog-option';
-      d.textContent = o.text;
-      d.onclick = () => { box.style.display = 'none'; G.paused = false; if (o.action) o.action(); };
+// ============================================================
+// DIALOG SYSTEM
+// ============================================================
+function showDialog(speaker,text,options){
+  const db=document.getElementById('dialog-box');
+  db.style.display='block';
+  document.getElementById('dialog-speaker').textContent=speaker;
+  document.getElementById('dialog-text').textContent=text;
+  const optDiv=document.getElementById('dialog-options');
+  optDiv.innerHTML='';
+  if(options){
+    options.forEach(o=>{
+      const d=document.createElement('div');d.className='dialog-opt';d.textContent=o.text;
+      d.addEventListener('click',()=>{hideDialog();if(o.action)o.action()});
       optDiv.appendChild(d);
     });
-  } else {
-    let d = document.createElement('div');
-    d.className = 'dialog-option';
-    d.textContent = '[Continue]';
-    d.onclick = () => { box.style.display = 'none'; G.paused = false; };
-    optDiv.appendChild(d);
+  }else{
+    const d=document.createElement('div');d.className='dialog-opt';d.textContent='[Continue]';
+    d.addEventListener('click',hideDialog);optDiv.appendChild(d);
   }
-  box.style.display = 'block';
-  G.paused = true;
 }
 
-// --- NOTIFICATION ---
-function notify(text) {
-  let el = document.getElementById('notification');
-  el.textContent = text;
-  el.style.display = 'block';
-  clearTimeout(el._timer);
-  el._timer = setTimeout(() => { el.style.display = 'none'; }, 2500);
-}
+function hideDialog(){document.getElementById('dialog-box').style.display='none'}
+
 // ============================================================
-// SHOP, INVENTORY, MISSIONS
+// HACKING MINI-GAME (isolated from main loop)
 // ============================================================
-
-const SHOP_ITEMS = [
-  { id: 'medkit', name: 'Medkit', desc: 'Restore 50 HP', price: 30, icon: '+', use: () => { G.player.hp = Math.min(G.player.maxHp, G.player.hp + 50); } },
-  { id: 'katana', name: 'Mono-Katana', desc: 'ATK+5 melee weapon', price: 80, icon: '/', type: 'melee', bonus: { atk: 5 } },
-  { id: 'pistol', name: 'Smart Pistol', desc: 'Ranged weapon', price: 100, icon: '>', type: 'ranged', bonus: { atk: 3 } },
-  { id: 'armor', name: 'Subdermal Armor', desc: 'DEF+3', price: 75, icon: '#', bonus: { def: 3 } },
-  { id: 'neuraldeck', name: 'Neural Deck v2', desc: 'HACK+4', price: 120, icon: '@', bonus: { hack: 4 } },
-  { id: 'booster', name: 'Synapse Booster', desc: 'SPD+3', price: 60, icon: '!', bonus: { spd: 3 } }
-];
-
-function openShop(npc) {
-  G.shopOpen = true; G.paused = true;
-  let container = document.getElementById('shop-items');
-  container.innerHTML = '';
-  SHOP_ITEMS.forEach(item => {
-    let div = document.createElement('div');
-    div.className = 'shop-item';
-    div.innerHTML = `<span style="font-size:24px;color:${ZONE_COLORS[G.zone]?.accent||'#0fc'}">${item.icon}</span>
-      <div><strong style="color:#0fc">${item.name}</strong><br><span style="color:#888">${item.desc}</span></div>
-      <span class="price" style="margin-left:auto">${item.price}c</span>`;
-    div.onclick = () => buyItem(item);
-    container.appendChild(div);
-  });
-  document.getElementById('shop-screen').style.display = 'flex';
-}
-
-function buyItem(item) {
-  if (G.player.credits < item.price) { notify('Not enough credits!'); return; }
-  G.player.credits -= item.price;
-  if (item.use) { item.use(); notify('Used ' + item.name); }
-  else { G.player.inventory.push({...item}); notify('Bought ' + item.name); }
-  updateHUD();
-}
-
-function closeShop() {
-  G.shopOpen = false; G.paused = false;
-  document.getElementById('shop-screen').style.display = 'none';
-}
-
-function toggleInventory() {
-  G.inventoryOpen = !G.inventoryOpen;
-  if (G.inventoryOpen) {
-    G.paused = true;
-    renderInventory();
-    document.getElementById('inventory-screen').style.display = 'flex';
-  } else {
-    G.paused = false;
-    document.getElementById('inventory-screen').style.display = 'none';
-  }
-}
-
-function renderInventory() {
-  let p = G.player;
-  document.getElementById('player-stats-display').innerHTML = 
-    `<span style="color:#0fc">${p.name}</span> | ${p.cls} | Lv.${p.level}<br>` +
-    `ATK:${p.stats.atk} DEF:${p.stats.def} HACK:${p.stats.hack} SPD:${p.stats.spd}<br>` +
-    `Credits: <span style="color:#fc0">${p.credits}</span>`;
-  let grid = document.getElementById('inv-grid');
-  grid.innerHTML = '';
-  p.inventory.forEach((item, i) => {
-    let div = document.createElement('div');
-    div.className = 'inv-slot' + (p.equipped === item ? ' equipped' : '');
-    div.textContent = item.icon;
-    div.title = item.name + ': ' + item.desc;
-    div.onclick = () => equipItem(i);
-    grid.appendChild(div);
-  });
-  // Empty slots
-  for (let i = p.inventory.length; i < 16; i++) {
-    let div = document.createElement('div');
-    div.className = 'inv-slot';
-    grid.appendChild(div);
-  }
-}
-
-function equipItem(idx) {
-  let item = G.player.inventory[idx];
-  if (item.use) { item.use(); G.player.inventory.splice(idx, 1); notify('Used ' + item.name); }
-  else if (item.type) {
-    // Unequip old
-    if (G.player.equipped && G.player.equipped.bonus) {
-      for (let k in G.player.equipped.bonus) G.player.stats[k] -= G.player.equipped.bonus[k];
+function startHackMinigame(difficulty,onSuccess,onFail){
+  G.running=false;
+  const panel=document.getElementById('hack-minigame');
+  panel.style.display='block';
+  const symbols=['@','#','$','%','&','*','^','!','~','+'];
+  const gridSize=difficulty<=3?4:6;
+  const matchCount=difficulty+2;
+  const timeLimit=8000+difficulty*2000;
+  let targetSyms=[];
+  for(let i=0;i<matchCount;i++)targetSyms.push(symbols[randInt(0,symbols.length-1)]);
+  // Build grid
+  let cells=[];
+  for(let i=0;i<gridSize*gridSize;i++)cells.push(symbols[randInt(0,symbols.length-1)]);
+  // Place targets
+  let placed=0;
+  let targetPositions=[];
+  while(placed<matchCount){
+    const idx=randInt(0,cells.length-1);
+    if(!targetPositions.includes(idx)){
+      cells[idx]=targetSyms[placed];
+      targetPositions.push(idx);
+      placed++;
     }
-    G.player.equipped = item;
-    if (item.bonus) { for (let k in item.bonus) G.player.stats[k] += item.bonus[k]; }
-    notify('Equipped ' + item.name);
   }
-  renderInventory();
-  updateHUD();
-}
+  let matched=0;let currentTarget=0;let timeLeft=timeLimit;let hackActive=true;
+  panel.innerHTML=`
+    <h2 style="color:#0f0;text-align:center">// BREACH PROTOCOL //</h2>
+    <p style="text-align:center;margin:8px 0">Find: <span id="hack-targets" style="color:#f0f;font-size:20px">${targetSyms.map((s,i)=>`<span id="ht-${i}">${s}</span>`).join(' ')}</span></p>
+    <div id="hack-grid" style="grid-template-columns:repeat(${gridSize},1fr)">
+      ${cells.map((c,i)=>`<div class="hack-cell" data-idx="${i}">${c}</div>`).join('')}
+    </div>
+    <div style="background:#333;height:8px;border-radius:4px;overflow:hidden"><div id="hack-timer" style="width:100%"></div></div>
+    <p style="text-align:center;margin-top:8px;font-size:12px;color:#888">Click symbols in order</p>`;
 
-// --- MISSIONS ---
-const ALL_MISSIONS = [
-  { id: 'm1', phase: 2, title: 'System Test', desc: 'Defeat 3 drones in the training area.', objectives: [{ type: 'defeat', target: 'drone', count: 3 }], rewards: { xp: 50, credits: 30 } },
-  { id: 'm2', phase: 2, title: 'First Hack', desc: 'Hack the practice terminal.', objectives: [{ type: 'hack', target: 'terminal', count: 1 }], rewards: { xp: 40, credits: 20 } },
-  { id: 'm3', phase: 3, title: 'Street Cred', desc: 'Defeat 5 enforcers in the Slums.', objectives: [{ type: 'defeat', target: 'enforcer', count: 5 }], rewards: { xp: 100, credits: 60 } },
-  { id: 'm4', phase: 3, title: 'Corporate Espionage', desc: 'Hack 2 terminals in the Corporate district.', objectives: [{ type: 'hack', target: 'terminal', count: 2 }], rewards: { xp: 80, credits: 80 } },
-  { id: 'm5', phase: 3, title: 'Exploration', desc: 'Visit all 4 zones.', objectives: [{ type: 'visit', target: 'zones', count: 4 }], rewards: { xp: 60, credits: 40 } },
-  { id: 'm6', phase: 4, title: 'Hold The Line', desc: 'Defeat 30 enemies during the System Breach.', objectives: [{ type: 'defeat', target: 'any', count: 30 }], rewards: { xp: 200, credits: 150 } }
-];
-
-function getAvailableMissions() {
-  return ALL_MISSIONS.filter(m => m.phase <= G.phase && !G.completedMissions.includes(m.id) && !G.missions.find(a => a.id === m.id));
-}
-
-function offerMission(npc) {
-  let available = getAvailableMissions();
-  if (available.length === 0) { showDialog(npc.name, "No new jobs right now. Check back later."); return; }
-  let m = available[0];
-  showDialog(npc.name, m.desc, [
-    { text: 'Accept: ' + m.title, action: () => { G.missions.push({...m, progress: m.objectives.map(o => ({...o, current: 0}))}); notify('Mission accepted: ' + m.title); }},
-    { text: 'Decline', action: () => {} }
-  ]);
-}
-
-function checkMissionProgress(type, target) {
-  G.missions.forEach(m => {
-    m.progress.forEach(obj => {
-      if (obj.type === type && (obj.target === target || obj.target === 'any')) {
-        obj.current = Math.min(obj.current + 1, obj.count);
+  const cellEls=panel.querySelectorAll('.hack-cell');
+  cellEls.forEach(cel=>{
+    cel.addEventListener('click',()=>{
+      if(!hackActive)return;
+      const idx=parseInt(cel.dataset.idx);
+      if(cells[idx]===targetSyms[currentTarget]&&targetPositions.includes(idx)){
+        cel.classList.add('matched');
+        const htEl=document.getElementById('ht-'+currentTarget);
+        if(htEl)htEl.style.color='#0f0';
+        matched++;currentTarget++;
+        if(matched>=matchCount){
+          hackActive=false;
+          notify('HACK SUCCESSFUL!');addLog('Hack successful!','log-hack');
+          setTimeout(()=>{panel.style.display='none';G.running=true;if(onSuccess)onSuccess()},800);
+        }
+      }else{
+        cel.classList.add('wrong');
+        setTimeout(()=>cel.classList.remove('wrong'),300);
       }
     });
-    // Check complete
-    if (m.progress.every(o => o.current >= o.count)) {
-      G.completedMissions.push(m.id);
-      G.player.xp += m.rewards.xp;
-      G.player.credits += m.rewards.credits;
-      notify('Mission complete: ' + m.title + '!');
-      checkLevelUp();
-      G.missions = G.missions.filter(mm => mm.id !== m.id);
-    }
   });
-}
-
-// --- NPC SETUP ---
-function setupNPCs(zone) {
-  G.npcs = [];
-  let cx = ZONE_W * TILE / 2, cy = ZONE_H * TILE / 2;
-  // Shop in every zone
-  G.npcs.push({ type: 'shop', name: 'Vendor', x: cx + 100, y: cy - 100, color: '#ffcc00', dialog: null });
-  // Mission giver
-  G.npcs.push({ type: 'mission', name: 'Fixer', x: cx - 100, y: cy - 100, color: '#ff00ff', dialog: null });
-  // Terminals
-  G.npcs.push({ type: 'terminal', name: 'Terminal', x: cx + 150, y: cy + 100, color: '#00ccff', hacked: false });
-  G.npcs.push({ type: 'terminal', name: 'Terminal', x: cx - 150, y: cy + 100, color: '#00ccff', hacked: false });
-  // Flavor NPCs
-  if (zone === 'downtown') {
-    G.npcs.push({ type: 'npc', name: 'Street Kid', x: cx + 50, y: cy + 50, color: NPC_COLOR, dialog: 'The streets are restless. Something big is coming.' });
-  } else if (zone === 'slums') {
-    G.npcs.push({ type: 'npc', name: 'Scavenger', x: cx - 50, y: cy + 50, color: NPC_COLOR, dialog: 'Watch your back. Enforcers have been cracking down.' });
-  } else if (zone === 'corporate') {
-    G.npcs.push({ type: 'npc', name: 'Corp Worker', x: cx, y: cy + 80, color: NPC_COLOR, dialog: 'Security systems are acting strange today...' });
-  } else if (zone === 'industrial') {
-    G.npcs.push({ type: 'npc', name: 'Mechanic', x: cx + 80, y: cy - 50, color: NPC_COLOR, dialog: 'I can hear the machines whispering. The Simulation is awake.' });
-  }
-}
-
-// --- ZONE TRANSITION ---
-function checkZoneTransition() {
-  let p = G.player;
-  let conn = ZONE_CONNECTIONS[G.zone];
-  if (!conn) return;
-  let newZone = null, newX = p.x, newY = p.y;
-  if (p.y < 5 && conn.north) { newZone = conn.north; newY = (ZONE_H-2)*TILE; }
-  if (p.y > (ZONE_H-1)*TILE-5 && conn.south) { newZone = conn.south; newY = 2*TILE; }
-  if (p.x < 5 && conn.west) { newZone = conn.west; newX = (ZONE_W-2)*TILE; }
-  if (p.x > (ZONE_W-1)*TILE-5 && conn.east) { newZone = conn.east; newX = 2*TILE; }
-  if (newZone) {
-    transitionZone(newZone, newX, newY);
-  }
-}
-
-function transitionZone(newZone, px, py) {
-  // CRITICAL CLEANUP: prevents entity/listener leak between zones
-  for (let e of enemyPool) e.active = false;
-  for (let p of particlePool) p.active = false;
-  for (let p of projPool) p.active = false;
-  G.pickups = [];
-  G.zone = newZone;
-  G.player.x = px; G.player.y = py;
-  setupNPCs(newZone);
-  if (G.phase >= 3) spawnZoneEnemies(newZone);
-  checkMissionProgress('visit', 'zones');
-  notify('Entering: ' + newZone.toUpperCase());
-  saveGame();
+  // Timer
+  let hackInterval=setInterval(()=>{
+    if(!hackActive){clearInterval(hackInterval);return}
+    timeLeft-=50;
+    const bar=document.getElementById('hack-timer');
+    if(bar)bar.style.width=(timeLeft/timeLimit*100)+'%';
+    if(timeLeft<=0){
+      hackActive=false;clearInterval(hackInterval);
+      notify('HACK FAILED!');addLog('Hack failed!','log-dmg');
+      setTimeout(()=>{panel.style.display='none';G.running=true;if(onFail)onFail()},800);
+    }
+  },50);
 }
 // ============================================================
-// PHASE CONTROLLERS
+// PHASE 2: NEO-TOKYO STREETS - Open City
 // ============================================================
-
-function spawnZoneEnemies(zone) {
-  let types = zone === 'slums' ? ['drone','drone','enforcer'] : 
-              zone === 'corporate' ? ['enforcer','hacker'] :
-              zone === 'industrial' ? ['drone','enforcer','hacker'] : ['drone','drone'];
-  let count = G.phase === 4 ? 6 : 3;
-  for (let i = 0; i < count; i++) {
-    let type = types[Math.floor(Math.random()*types.length)];
-    let x = (3 + Math.random()*(ZONE_W-6)) * TILE;
-    let y = (3 + Math.random()*(ZONE_H-6)) * TILE;
-    spawnEnemy(type, x, y);
-  }
-}
-
-// --- PHASE 1: AWAKENING ---
-let selectedClass = null;
-let statPoints = 5;
-let tempStats = { atk: 1, def: 1, hack: 1, spd: 1 };
-
-function startNewGame() {
-  document.getElementById('menu-screen').style.display = 'none';
-  document.getElementById('phase1-screen').style.display = 'flex';
-  G.phase = 1;
-}
-
-function selectClass(cls) {
-  selectedClass = cls;
-  document.querySelectorAll('.class-card').forEach(c => c.classList.remove('selected'));
-  event.currentTarget.classList.add('selected');
-  tempStats = { atk: 1, def: 1, hack: 1, spd: 1 };
-  statPoints = 5;
-  if (cls === 'netrunner') { tempStats.hack += 3; tempStats.spd += 1; }
-  else if (cls === 'samurai') { tempStats.atk += 3; tempStats.def += 1; }
-  else if (cls === 'techie') { tempStats.def += 2; tempStats.hack += 2; }
-  updateStatDisplay();
-}
-
-function adjStat(stat, d) {
-  if (d > 0 && statPoints <= 0) return;
-  if (d < 0 && tempStats[stat] <= 1) return;
-  tempStats[stat] += d;
-  statPoints -= d;
-  updateStatDisplay();
-}
-
-function updateStatDisplay() {
-  document.getElementById('s-atk').textContent = tempStats.atk;
-  document.getElementById('s-def').textContent = tempStats.def;
-  document.getElementById('s-hack').textContent = tempStats.hack;
-  document.getElementById('s-spd').textContent = tempStats.spd;
-  document.getElementById('stat-points').textContent = 'Stat Points: ' + statPoints;
-}
-
-function confirmCharacter() {
-  let name = document.getElementById('player-name').value.trim() || 'Runner';
-  if (!selectedClass) { notify('Select a class!'); return; }
-  G.player.name = name;
-  G.player.cls = selectedClass;
-  G.player.stats = {...tempStats};
-  G.player.speed = 130 + tempStats.spd * 15;
-  G.player.maxHp = 80 + tempStats.def * 10;
-  G.player.hp = G.player.maxHp;
-  document.getElementById('phase1-screen').style.display = 'none';
-  startPhase(2);
-}
-
-// --- PHASE 2: FIRST JACK-IN ---
-function startPhase2() {
-  G.zone = 'downtown';
-  initZones();
-  G.player.x = ZONE_W * TILE / 2;
-  G.player.y = ZONE_H * TILE / 2;
-  setupNPCs('downtown');
-  // Spawn tutorial enemies
-  for (let i = 0; i < 3; i++) {
-    spawnEnemy('drone', (10 + i*5)*TILE, 10*TILE);
-  }
-  // Tutorial terminal
-  G.npcs.push({ type: 'terminal', name: 'Practice Terminal', x: 15*TILE, y: 15*TILE, color: '#00ccff', hacked: false });
-  showDialog('SYSTEM', 'Welcome to the Simulation, ' + G.player.name + '. Use WASD to move. Click to attack. Defeat the drones and hack the terminal to proceed.', [
-    { text: '[Begin]', action: () => {} }
-  ]);
-}
-
-// --- PHASE 3: NEO-TOKYO STREETS ---
-function startPhase3() {
-  notify('Phase 3: Neo-Tokyo Streets - Explore the city!');
-  G.zone = 'downtown';
-  G.player.x = ZONE_W * TILE / 2;
-  G.player.y = ZONE_H * TILE / 2;
-  setupNPCs('downtown');
-  spawnZoneEnemies('downtown');
-  showDialog('FIXER', 'The city is yours to explore. Visit all 4 districts, take on missions, gear up. Something big is coming.', [
-    { text: '[Got it]', action: () => {} }
-  ]);
-}
-
-// --- PHASE 4: SYSTEM BREACH ---
-// THIS WAS THE PHASE CAUSING FREEZES. Fixed with:
-// 1. Entity budget (MAX_ENTITIES = 50)
-// 2. Wave-based spawning (not all at once)
-// 3. Delta time capping (MAX_DELTA = 50ms)
-// 4. AI throttling for off-screen enemies
-// 5. Particle budget (MAX_PARTICLES = 100)
-// 6. Full cleanup on phase exit
-function startPhase4() {
-  G.phase4 = { wave: 0, maxWaves: 8, waveTimer: 0, enemiesDefeated: 0, zonesSecured: 0, totalToSecure: 3, bossSpawned: false };
-  notify('PHASE 4: SYSTEM BREACH - The city is under attack!');
-  G.zone = 'downtown';
-  G.player.x = ZONE_W * TILE / 2;
-  G.player.y = ZONE_H * TILE / 2;
-  setupNPCs(G.zone);
-  // Add hackable security nodes to secure
-  G.npcs.push({ type: 'terminal', name: 'Security Node', x: 8*TILE, y: 8*TILE, color: '#ff4444', hacked: false });
-  showDialog('SYSTEM', 'WARNING: Massive cyber-attack detected! Hostile entities breaching all zones. Secure 3 terminals and survive 8 waves to locate the Core.', [
-    { text: '[Defend the city]', action: () => { spawnPhase4Wave(); } }
-  ]);
-}
-
-function spawnPhase4Wave() {
-  if (G.phase !== 4) return;
-  let w = G.phase4.wave;
-  // Count active enemies - DON'T SPAWN IF BUDGET IS FULL
-  let activeCount = 0;
-  for (let e of enemyPool) if (e.active) activeCount++;
-  let toSpawn = Math.min(4 + w, MAX_ENTITIES - activeCount); // CRITICAL: respect budget
-  toSpawn = Math.max(0, toSpawn);
-  
-  let types = w < 3 ? ['drone'] : w < 6 ? ['drone','enforcer'] : ['enforcer','hacker','drone'];
-  for (let i = 0; i < toSpawn; i++) {
-    let type = types[Math.floor(Math.random()*types.length)];
-    // Spawn at zone edges
-    let edge = Math.floor(Math.random()*4);
-    let x, y;
-    if (edge === 0) { x = 2*TILE; y = (3+Math.random()*(ZONE_H-6))*TILE; }
-    else if (edge === 1) { x = (ZONE_W-3)*TILE; y = (3+Math.random()*(ZONE_H-6))*TILE; }
-    else if (edge === 2) { x = (3+Math.random()*(ZONE_W-6))*TILE; y = 2*TILE; }
-    else { x = (3+Math.random()*(ZONE_W-6))*TILE; y = (ZONE_H-3)*TILE; }
-    spawnEnemy(type, x, y);
-  }
-  G.phase4.wave++;
-  notify('Wave ' + G.phase4.wave + '/' + G.phase4.maxWaves);
-}
-
-function updatePhase4(dt) {
-  G.phase4.waveTimer += dt;
-  // Spawn next wave every 12 seconds, but ONLY if active count is low
-  let activeCount = 0;
-  for (let e of enemyPool) if (e.active) activeCount++;
-  
-  if (G.phase4.wave < G.phase4.maxWaves && G.phase4.waveTimer > 12000 && activeCount < 15) {
-    G.phase4.waveTimer = 0;
-    spawnPhase4Wave();
-  }
-  
-  // Check if all waves done and enemies cleared
-  if (G.phase4.wave >= G.phase4.maxWaves && activeCount === 0 && G.phase4.zonesSecured >= G.phase4.totalToSecure) {
-    showDialog('SYSTEM', 'All zones secured. Breach contained. The Core has been located. Prepare for final infiltration.', [
-      { text: '[Enter the Core]', action: () => { startPhase(5); } }
-    ]);
-  } else if (G.phase4.wave >= G.phase4.maxWaves && activeCount === 0 && G.phase4.zonesSecured < G.phase4.totalToSecure) {
-    notify('Waves cleared! Hack ' + (G.phase4.totalToSecure - G.phase4.zonesSecured) + ' more terminals!');
-    G.phase4.wave--; // Allow more waves while terminals remain
-    G.phase4.waveTimer = 8000;
-  }
-}
-
-// --- PHASE 5: THE CORE ---
-function startPhase5() {
-  // Clean up everything from phase 4
-  for (let e of enemyPool) e.active = false;
-  for (let p of particlePool) p.active = false;
-  for (let p of projPool) p.active = false;
-  G.pickups = [];
-  
-  G.phase5 = { bossHp: 500 + G.player.level * 20, bossMaxHp: 500 + G.player.level * 20, bossPhase: 0, bossTimer: 0, bossX: ZONE_W*TILE/2, bossY: 8*TILE, bossAngle: 0 };
-  G.zone = 'downtown'; // Reuse zone
-  // Create boss arena
-  G.zones['downtown'] = [];
-  for (let y = 0; y < ZONE_H; y++) {
-    G.zones['downtown'][y] = [];
-    for (let x = 0; x < ZONE_W; x++) {
-      G.zones['downtown'][y][x] = (x === 0 || y === 0 || x === ZONE_W-1 || y === ZONE_H-1) ? 1 : 0;
+phases[2]={
+  spawnTimer:0,
+  interactCooldown:0,
+  enter(){
+    G.running=true;G.zone='downtown';
+    G.player.x=500;G.player.y=500;
+    G.world={width:2000,height:2000};
+    showHUD();
+    notify('Welcome to Neo-Tokyo');
+    // Setup missions
+    G.missions=[
+      {id:'m1',name:'Clear the Streets',desc:'Defeat 5 enemies in Downtown',type:'kill',target:5,progress:0,zone:'downtown',complete:false,reward:{credits:200,xp:100}},
+      {id:'m2',name:'Hack the Network',desc:'Hack 2 terminals',type:'hack',target:2,progress:0,complete:false,reward:{credits:300,xp:150}},
+      {id:'m3',name:'Corporate Espionage',desc:'Defeat 3 enemies in Corporate District',type:'kill',target:3,progress:0,zone:'corporate',complete:false,reward:{credits:400,xp:200}},
+      {id:'m4',name:'Industrial Sabotage',desc:'Hack the Industrial terminal and defeat 4 enemies',type:'multi',tasks:[{type:'hack',target:1,progress:0,zone:'industrial'},{type:'kill',target:4,progress:0,zone:'industrial'}],complete:false,reward:{credits:500,xp:300}}
+    ];
+    if(!G.activeMission)G.activeMission=G.missions[0];
+    // Spawn initial enemies
+    for(let i=0;i<5;i++){
+      spawnEnemy(rand(100,1800),rand(100,1800),'grunt','downtown');
     }
-  }
-  G.player.x = ZONE_W*TILE/2; G.player.y = (ZONE_H-5)*TILE;
-  G.npcs = [];
-  G.player.hp = G.player.maxHp; // Full heal for boss
-  
-  showDialog('THE CORE', 'You have breached the simulation\'s inner sanctum. I am the ARCHITECT. Your existence is a glitch. Prepare for deletion.', [
-    { text: '[Fight]', action: () => { spawnEnemy('boss', G.phase5.bossX, G.phase5.bossY); } }
-  ]);
-}
-
-function updatePhase5(dt) {
-  let boss = null;
-  for (let e of enemyPool) { if (e.active && e.type === 'boss') { boss = e; break; } }
-  if (!boss) {
-    // Boss defeated
-    if (G.phase5.bossHp <= 0 || G.phase5.bossPhase >= 3) {
-      gameWin();
-      return;
-    }
-    return;
-  }
-  
-  G.phase5.bossHp = boss.hp;
-  G.phase5.bossTimer += dt;
-  
-  // Boss phases based on HP
-  let hpPct = boss.hp / boss.maxHp;
-  if (hpPct < 0.3 && G.phase5.bossPhase < 2) {
-    G.phase5.bossPhase = 2;
-    boss.speed = 80; boss.dmg = 30;
-    notify('THE ARCHITECT enters rage mode!');
-  } else if (hpPct < 0.6 && G.phase5.bossPhase < 1) {
-    G.phase5.bossPhase = 1;
-    boss.speed = 60; boss.dmg = 25;
-    // Spawn minions
-    for (let i = 0; i < 3; i++) spawnEnemy('drone', boss.x + (i-1)*80, boss.y + 80);
-    notify('THE ARCHITECT summons drones!');
-  }
-  
-  // Boss special attack - fire projectiles in circle
-  if (G.phase5.bossTimer > 2000) {
-    G.phase5.bossTimer = 0;
-    let count = G.phase5.bossPhase >= 2 ? 12 : 8;
-    for (let i = 0; i < count; i++) {
-      let angle = (Math.PI*2/count) * i + G.phase5.bossAngle;
-      let tx = boss.x + Math.cos(angle)*200;
-      let ty = boss.y + Math.sin(angle)*200;
-      fireProjectile(boss.x, boss.y, tx, ty, boss.dmg, false, '#ff0040');
-    }
-    G.phase5.bossAngle += 0.3;
-    spawnParticle(boss.x, boss.y, '#ff0040', 10);
-  }
-  
-  if (boss.hp <= 0) {
-    boss.active = false;
-    G.phase5.bossPhase = 3;
-    gameWin();
-  }
-}
-
-function gameWin() {
-  G.running = false;
-  showDialog('SYSTEM', 'The Architect has been destroyed. The Simulation is free. You did it, ' + G.player.name + '.', [
-    { text: '[Credits roll]', action: () => {
-      ctx.fillStyle = '#0a0a0f';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = '#00ffcc';
-      ctx.font = '36px Courier New';
-      ctx.textAlign = 'center';
-      ctx.fillText('THE SIMULATION', canvas.width/2, canvas.height/2 - 60);
-      ctx.font = '18px Courier New';
-      ctx.fillText('Congratulations, ' + G.player.name, canvas.width/2, canvas.height/2);
-      ctx.fillStyle = '#888';
-      ctx.font = '14px Courier New';
-      ctx.fillText('You freed the simulation.', canvas.width/2, canvas.height/2 + 30);
-      ctx.fillText('Level: ' + G.player.level + ' | Class: ' + G.player.cls, canvas.width/2, canvas.height/2 + 55);
-      ctx.fillText('Enemies defeated: ' + G.phase4.enemiesDefeated, canvas.width/2, canvas.height/2 + 75);
-    }}
-  ]);
-}
-
-function gameOver() {
-  G.running = false;
-  document.getElementById('game-over').style.display = 'flex';
-}
-
-// --- PHASE TRANSITIONS ---
-function startPhase(n) {
-  // Clean up current phase
-  for (let e of enemyPool) e.active = false;
-  for (let p of particlePool) p.active = false;
-  for (let p of projPool) p.active = false;
-  G.pickups = [];
-  G.phase = n;
-  document.getElementById('hud-phase').textContent = 'Phase ' + n;
-  
-  if (n === 2) startPhase2();
-  else if (n === 3) startPhase3();
-  else if (n === 4) startPhase4();
-  else if (n === 5) startPhase5();
-  
-  G.running = true;
-  document.getElementById('hud').style.display = 'block';
-  updateHUD();
-  saveGame();
-}
-
-// Check phase 2 completion
-function checkPhase2Complete() {
-  if (G.phase !== 2) return;
-  let dronesKilled = G.completedMissions.includes('m1') || 
-    (G.missions.find(m => m.id === 'm1') && G.missions.find(m => m.id === 'm1').progress[0].current >= 3);
-  let termHacked = G.completedMissions.includes('m2') ||
-    G.npcs.some(n => n.type === 'terminal' && n.hacked);
-  // Simple check: if player has enough XP or has explored
-  let activeEnemies = 0;
-  for (let e of enemyPool) if (e.active) activeEnemies++;
-  if (activeEnemies === 0 && G.npcs.some(n => n.type === 'terminal' && n.hacked)) {
-    showDialog('SYSTEM', 'Training complete. Neural pathways established. Entering the city grid.', [
-      { text: '[Proceed to Phase 3]', action: () => { startPhase(3); } }
-    ]);
-  }
-}
-
-// Check phase 3 completion
-function checkPhase3Complete() {
-  if (G.phase !== 3) return;
-  // Progress when player reaches level 3 or completes missions
-  if (G.player.level >= 3 || G.completedMissions.length >= 3) {
-    if (!G._phase3warned) {
-      G._phase3warned = true;
-      showDialog('FIXER', 'Emergency signal detected! A massive breach in the system - hostiles are pouring in from every zone. We need you NOW.', [
-        { text: '[Begin System Breach - Phase 4]', action: () => { startPhase(4); } },
-        { text: '[Not yet, need to prepare]', action: () => { G._phase3warned = false; } }
-      ]);
-    }
-  }
-}
-// ============================================================
-// GAME LOOP, RENDERING, UPDATE, SAVE/LOAD
-// ============================================================
-
-// --- HUD UPDATE ---
-function updateHUD() {
-  let p = G.player;
-  document.getElementById('hp-bar').style.width = (p.hp/p.maxHp*100) + '%';
-  document.getElementById('hp-text').textContent = Math.ceil(p.hp) + '/' + p.maxHp;
-  document.getElementById('xp-bar').style.width = (p.xp/p.xpNext*100) + '%';
-  document.getElementById('xp-text').textContent = p.xp + '/' + p.xpNext;
-  document.getElementById('hud-credits').textContent = 'Credits: ' + p.credits;
-  document.getElementById('hud-level').textContent = 'Lv.' + p.level;
-}
-
-// --- UPDATE ---
-function update(dt) {
-  if (G.paused || !G.running) return;
-  G.frameCount++;
-  let p = G.player;
-  
-  // Player movement
-  let mx = 0, my = 0;
-  if (G.keys['w'] || G.keys['arrowup']) my = -1;
-  if (G.keys['s'] || G.keys['arrowdown']) my = 1;
-  if (G.keys['a'] || G.keys['arrowleft']) mx = -1;
-  if (G.keys['d'] || G.keys['arrowright']) mx = 1;
-  if (mx && my) { mx *= 0.707; my *= 0.707; }
-  let speed = p.speed + p.stats.spd * 10;
-  let nx = p.x + mx * speed * dt / 1000;
-  let ny = p.y + my * speed * dt / 1000;
-  if (!tileBlocked(nx, p.y)) p.x = nx;
-  if (!tileBlocked(p.x, ny)) p.y = ny;
-  // Clamp to zone
-  p.x = Math.max(TILE, Math.min((ZONE_W-1)*TILE-1, p.x));
-  p.y = Math.max(TILE, Math.min((ZONE_H-1)*TILE-1, p.y));
-  
-  p.attackTimer = Math.max(0, p.attackTimer - dt);
-  p.invincible = Math.max(0, p.invincible - dt);
-  
-  // Camera
-  G.camera.x = p.x;
-  G.camera.y = p.y;
-  
-  // Update enemies
-  let eidx = 0;
-  for (let e of enemyPool) {
-    if (e.active) updateEnemyAI(e, dt, eidx);
-    eidx++;
-  }
-  
-  // Update projectiles
-  for (let proj of projPool) {
-    if (!proj.active) continue;
-    proj.x += proj.vx * dt/1000;
-    proj.y += proj.vy * dt/1000;
-    proj.life -= dt/1000;
-    if (proj.life <= 0 || tileBlocked(proj.x, proj.y)) { proj.active = false; continue; }
-    
-    if (proj.friendly) {
-      for (let e of enemyPool) {
-        if (!e.active) continue;
-        let dx = proj.x - e.x, dy = proj.y - e.y;
-        if (dx*dx+dy*dy < 400) { damageEnemy(e, proj.dmg); proj.active = false; break; }
+  },
+  update(dt){
+    const self=phases[2];
+    self.spawnTimer-=dt;
+    self.interactCooldown-=dt;
+    // Spawn enemies periodically
+    if(self.spawnTimer<=0){
+      self.spawnTimer=5000;
+      const activeCount=G.entities.filter(e=>e.active&&e.type==='enemy'&&e.zone===G.zone).length;
+      if(activeCount<8){
+        const types=['grunt','grunt','grunt','enforcer','drone'];
+        spawnEnemy(rand(100,1800),rand(100,1800),types[randInt(0,types.length-1)],G.zone);
       }
-    } else {
-      let dx = proj.x - p.x, dy = proj.y - p.y;
-      if (dx*dx+dy*dy < 400) { damagePlayer(proj.dmg); proj.active = false; }
     }
-  }
-  
-  // Update particles
-  for (let part of particlePool) {
-    if (!part.active) continue;
-    part.x += part.vx * dt/1000;
-    part.y += part.vy * dt/1000;
-    part.life += dt/1000;
-    part.vx *= 0.95; part.vy *= 0.95;
-    if (part.life >= part.maxLife) part.active = false;
-  }
-  
-  // Update pickups
-  for (let i = G.pickups.length - 1; i >= 0; i--) {
-    let pk = G.pickups[i];
-    pk.timer -= dt/1000;
-    if (pk.timer <= 0) { G.pickups.splice(i, 1); continue; }
-    let dx = pk.x - p.x, dy = pk.y - p.y;
-    if (dx*dx+dy*dy < 900) {
-      if (pk.type === 'hp') p.hp = Math.min(p.maxHp, p.hp + pk.value);
-      G.pickups.splice(i, 1);
-      notify('+' + pk.value + ' HP');
-    }
-  }
-  
-  // Zone transitions
-  if (G.phase >= 3) checkZoneTransition();
-  
-  // Phase-specific updates
-  if (G.phase === 2 && G.frameCount % 120 === 0) checkPhase2Complete();
-  if (G.phase === 3 && G.frameCount % 180 === 0) checkPhase3Complete();
-  if (G.phase === 4) updatePhase4(dt);
-  if (G.phase === 5) updatePhase5(dt);
-  
-  // Hack timer
-  if (G.hackActive) {
-    hackState.timer -= dt/1000;
-    document.getElementById('hack-timer').textContent = Math.max(0, hackState.timer).toFixed(1);
-    if (hackState.timer <= 0) hackFail();
-  }
-  
-  // HUD update every 10 frames
-  if (G.frameCount % 10 === 0) updateHUD();
-}
-
-// --- RENDER ---
-function render() {
-  ctx.fillStyle = '#0a0a0f';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  
-  if (!G.running && G.phase === 0) return;
-  
-  let ox = canvas.width/2 - G.camera.x;
-  let oy = canvas.height/2 - G.camera.y;
-  let colors = ZONE_COLORS[G.zone] || ZONE_COLORS.downtown;
-  let tiles = G.zones[G.zone];
-  if (!tiles) return;
-  
-  // Calculate visible tile range for culling
-  let startTX = Math.max(0, Math.floor((G.camera.x - canvas.width/2) / TILE));
-  let endTX = Math.min(ZONE_W, Math.ceil((G.camera.x + canvas.width/2) / TILE) + 1);
-  let startTY = Math.max(0, Math.floor((G.camera.y - canvas.height/2) / TILE));
-  let endTY = Math.min(ZONE_H, Math.ceil((G.camera.y + canvas.height/2) / TILE) + 1);
-  
-  // Draw tiles (only visible ones)
-  for (let y = startTY; y < endTY; y++) {
-    for (let x = startTX; x < endTX; x++) {
-      let sx = x * TILE + ox, sy = y * TILE + oy;
-      if (tiles[y][x] === 1) {
-        ctx.fillStyle = colors.wall;
-        ctx.fillRect(sx, sy, TILE, TILE);
-        ctx.strokeStyle = colors.accent + '33';
-        ctx.strokeRect(sx, sy, TILE, TILE);
-      } else {
-        ctx.fillStyle = colors.floor;
-        ctx.fillRect(sx, sy, TILE, TILE);
-        // Grid lines
-        if ((x + y) % 4 === 0) {
-          ctx.fillStyle = colors.accent + '08';
-          ctx.fillRect(sx, sy, TILE, TILE);
+    // Zone transitions
+    const p=G.player;const zd=G.zones[G.zone];
+    if(p.x<20){switchZone('left');p.x=1950}
+    if(p.x>1980){switchZone('right');p.x=50}
+    if(p.y<20){switchZone('up');p.y=1950}
+    if(p.y>1980){switchZone('down');p.y=50}
+    // Interact with NPCs
+    if(keys.e&&self.interactCooldown<=0){
+      keys.e=false;self.interactCooldown=500;
+      const zoneData=G.zones[G.zone];
+      if(zoneData&&zoneData.npcs){
+        for(const npc of zoneData.npcs){
+          if(dist(p,npc)<60){interactNPC(npc);break}
+        }
+      }
+      // Terminals
+      if(zoneData&&zoneData.terminals){
+        for(const t of zoneData.terminals){
+          if(dist(p,t)<60&&!t.hacked){
+            showDialog('TERMINAL','Secure terminal detected. Press H to hack.');break;
+          }
         }
       }
     }
-  }
-  
-  // Draw pickups (with culling)
-  for (let pk of G.pickups) {
-    if (!isOnScreen(pk.x, pk.y)) continue;
-    ctx.fillStyle = pk.type === 'hp' ? '#00ff44' : '#ffcc00';
-    ctx.beginPath();
-    ctx.arc(pk.x + ox, pk.y + oy, 6, 0, Math.PI*2);
-    ctx.fill();
-    ctx.fillStyle = '#fff';
-    ctx.font = '10px Courier New';
-    ctx.textAlign = 'center';
-    ctx.fillText('+', pk.x + ox, pk.y + oy + 3);
-  }
-  
-  // Draw NPCs (with culling)
-  for (let n of G.npcs) {
-    if (!isOnScreen(n.x, n.y)) continue;
-    let nx = n.x + ox, ny = n.y + oy;
-    ctx.fillStyle = n.color;
-    if (n.type === 'terminal') {
-      ctx.fillStyle = n.hacked ? '#004400' : n.color;
-      ctx.fillRect(nx - 10, ny - 10, 20, 20);
-      ctx.strokeStyle = n.hacked ? '#00ff44' : '#00ccff';
-      ctx.strokeRect(nx - 10, ny - 10, 20, 20);
-      ctx.fillStyle = '#fff';
-      ctx.font = '12px Courier New';
-      ctx.textAlign = 'center';
-      ctx.fillText(n.hacked ? 'OK' : '@', nx, ny + 4);
-    } else {
-      ctx.beginPath();
-      ctx.arc(nx, ny, 10, 0, Math.PI*2);
-      ctx.fill();
-      ctx.fillStyle = '#fff';
-      ctx.font = '10px Courier New';
-      ctx.textAlign = 'center';
-      ctx.fillText(n.type === 'shop' ? '$' : n.type === 'mission' ? '!' : '?', nx, ny + 3);
+    // Hack terminals
+    if(keys.h){
+      keys.h=false;
+      const zoneData=G.zones[G.zone];
+      if(zoneData&&zoneData.terminals){
+        for(const t of zoneData.terminals){
+          if(dist(p,t)<60&&!t.hacked){
+            startHackMinigame(4,()=>{
+              t.hacked=true;notify('Terminal hacked!');
+              checkMissionProgress('hack');
+            });break;
+          }
+        }
+      }
     }
-    // Name label
-    ctx.fillStyle = n.color;
-    ctx.font = '9px Courier New';
-    ctx.fillText(n.name, nx, ny - 14);
-  }
-  
-  // Draw enemies (with culling)
-  for (let e of enemyPool) {
-    if (!e.active) continue;
-    if (!isOnScreen(e.x, e.y)) continue; // VIEWPORT CULLING
-    let ex = e.x + ox, ey = e.y + oy;
-    let size = e.type === 'boss' ? 18 : 10;
-    ctx.fillStyle = e.color;
-    if (e.type === 'boss') {
-      // Boss: diamond shape
-      ctx.beginPath();
-      ctx.moveTo(ex, ey - size);
-      ctx.lineTo(ex + size, ey);
-      ctx.lineTo(ex, ey + size);
-      ctx.lineTo(ex - size, ey);
-      ctx.closePath();
-      ctx.fill();
-      ctx.strokeStyle = '#ff0040';
-      ctx.lineWidth = 2;
-      ctx.stroke();
-      ctx.lineWidth = 1;
-    } else {
-      ctx.beginPath();
-      ctx.arc(ex, ey, size, 0, Math.PI*2);
-      ctx.fill();
+    // Toggle panels
+    if(keys.i){keys.i=false;toggleInventory()}
+    if(keys.m){keys.m=false;toggleMap()}
+    if(keys.escape){keys.escape=false;toggleMenu()}
+    // Check all missions complete -> advance
+    const allDone=G.missions.filter(m=>m.complete).length>=3;
+    if(allDone&&!self.advanceShown){
+      self.advanceShown=true;
+      showDialog('SYSTEM','Critical alert: Massive cyber-attack detected! All zones under siege!',
+        [{text:'[Engage System Breach Protocol]',action:()=>setPhase(3)}]);
     }
-    // HP bar
-    ctx.fillStyle = '#300';
-    ctx.fillRect(ex - 12, ey - size - 8, 24, 3);
-    ctx.fillStyle = e.color;
-    ctx.fillRect(ex - 12, ey - size - 8, 24 * (e.hp/e.maxHp), 3);
+    updateGameplay(dt);
+  },
+  render(){
+    renderWorld();renderZoneFeatures();renderEntities();renderParticles();renderPlayer();
+  },
+  exit(){
+    hideDialog();closeAllPanels();G.running=false;
+    document.getElementById('boss-hp').style.display='none';
   }
-  
-  // Draw projectiles (with culling)
-  for (let proj of projPool) {
-    if (!proj.active) continue;
-    if (!isOnScreen(proj.x, proj.y)) continue;
-    ctx.fillStyle = proj.color;
-    ctx.beginPath();
-    ctx.arc(proj.x + ox, proj.y + oy, 3, 0, Math.PI*2);
-    ctx.fill();
+};
+
+function switchZone(dir){
+  const zoneMap={
+    downtown:{left:'slums',up:'corporate',right:'downtown',down:'downtown'},
+    slums:{right:'downtown',up:'industrial',left:'slums',down:'slums'},
+    corporate:{down:'downtown',left:'industrial',right:'corporate',up:'corporate'},
+    industrial:{down:'slums',right:'corporate',left:'industrial',up:'industrial'}
+  };
+  const next=zoneMap[G.zone]?zoneMap[G.zone][dir]:G.zone;
+  if(next!==G.zone){
+    // Deactivate current zone enemies
+    G.entities.forEach(e=>{if(e.active&&e.zone===G.zone)e.active=false});
+    G.zone=next;
+    notify(G.zones[G.zone].name);
+    // Spawn zone enemies
+    for(let i=0;i<4;i++){
+      const types=['grunt','enforcer','drone','cyber'];
+      spawnEnemy(rand(200,1800),rand(200,1800),types[randInt(0,3)],G.zone);
+    }
   }
-  
-  // Draw particles (with culling)
-  for (let part of particlePool) {
-    if (!part.active) continue;
-    if (!isOnScreen(part.x, part.y)) continue;
-    let alpha = 1 - part.life / part.maxLife;
-    ctx.globalAlpha = alpha;
-    ctx.fillStyle = part.color;
-    ctx.fillRect(part.x + ox - part.size/2, part.y + oy - part.size/2, part.size, part.size);
+}
+
+function interactNPC(npc){
+  const dialogs={
+    fixerDialog:()=>showDialog('Fixer','Got work if you want it, runner. The streets ain\'t gonna clean themselves.',[
+      {text:'[View Missions]',action:()=>showMissions()},
+      {text:'[Shop]',action:()=>openShop(G.zones[G.zone].shopItems)},
+      {text:'[Leave]',action:hideDialog}]),
+    infoBrokerDialog:()=>showDialog('Info Broker','Information is the real currency in this city. Need intel?',[
+      {text:'[Buy info - 50cr]',action:()=>{
+        if(G.credits>=50){G.credits-=50;notify('The Corporate District holds secrets...');addLog('Bought intel.','log-info')}
+        else notify('Not enough credits!')
+      }},
+      {text:'[Leave]',action:hideDialog}]),
+    streetDocDialog:()=>showDialog('Street Doc','You look like you could use some patching up.',[
+      {text:'[Heal - 30cr]',action:()=>{
+        if(G.credits>=30){G.credits-=30;G.player.hp=G.player.maxHp;notify('Fully healed!')}
+        else notify('Not enough credits!')
+      }},
+      {text:'[Shop]',action:()=>openShop(G.zones[G.zone].shopItems)},
+      {text:'[Leave]',action:hideDialog}]),
+    corpDialog:()=>showDialog('Corp Agent','You shouldn\'t be here. But since you are... I might have a job.',[
+      {text:'[View Missions]',action:()=>showMissions()},
+      {text:'[Leave]',action:hideDialog}]),
+    mechDialog:()=>showDialog('Mechanic','Need some upgrades? I got the best chrome in the district.',[
+      {text:'[Shop]',action:()=>openShop(G.zones[G.zone].shopItems)},
+      {text:'[Leave]',action:hideDialog}])
+  };
+  if(dialogs[npc.dialog])dialogs[npc.dialog]();
+}
+
+function showMissions(){
+  hideDialog();
+  let html='<h2>MISSIONS</h2>';
+  G.missions.forEach(m=>{
+    const active=G.activeMission&&G.activeMission.id===m.id;
+    const status=m.complete?'<span style="color:#0f0">COMPLETE</span>':
+      (active?'<span style="color:#ff0">ACTIVE</span>':'<span style="color:#888">Available</span>');
+    let prog='';
+    if(m.type==='multi'){
+      prog=m.tasks.map(t=>`${t.type}:${t.progress}/${t.target}`).join(', ');
+    }else{
+      prog=`${m.progress||0}/${m.target}`;
+    }
+    html+=`<div style="border:1px solid #333;padding:8px;margin:5px 0;cursor:pointer" onclick="selectMission('${m.id}')">
+      <div style="color:#f0f">${m.name} ${status}</div>
+      <div style="font-size:12px;color:#888">${m.desc}</div>
+      <div style="font-size:11px;color:#0ff">Progress: ${prog} | Reward: ${m.reward.credits}cr, ${m.reward.xp}XP</div></div>`;
+  });
+  html+='<div style="text-align:center;margin-top:10px"><button class="btn" onclick="closeMissions()">Close</button></div>';
+  showOverlayHTML(html);
+}
+// Expose to onclick
+window.selectMission=function(id){
+  const m=G.missions.find(mm=>mm.id===id);
+  if(m&&!m.complete){G.activeMission=m;notify('Mission: '+m.name)}
+  closeOverlay();
+};
+window.closeMissions=closeOverlay;
+
+function checkMissionProgress(type){
+  const m=G.activeMission;if(!m||m.complete)return;
+  if(m.type==='multi'){
+    m.tasks.forEach(t=>{
+      if(t.type===type&&(!t.zone||t.zone===G.zone))t.progress++;
+    });
+    if(m.tasks.every(t=>t.progress>=t.target))completeMission(m);
+  }else if(m.type===type){
+    if(!m.zone||m.zone===G.zone){
+      m.progress=(m.progress||0)+1;
+      if(m.progress>=m.target)completeMission(m);
+    }
   }
-  ctx.globalAlpha = 1;
-  
-  // Draw player
-  let px = G.player.x + ox, py = G.player.y + oy;
-  if (G.player.invincible > 0 && Math.floor(G.player.invincible/80) % 2) {
-    ctx.globalAlpha = 0.4;
+}
+
+function completeMission(m){
+  m.complete=true;
+  G.credits+=m.reward.credits;G.xp+=m.reward.xp;checkLevelUp();
+  notify(`Mission Complete: ${m.name}!`);
+  addLog(`Completed: ${m.name} +${m.reward.credits}cr +${m.reward.xp}XP`,'log-info');
+  // Auto-select next mission
+  const next=G.missions.find(mm=>!mm.complete);
+  if(next)G.activeMission=next;
+}
+
+function openShop(items){
+  hideDialog();
+  let html='<h2>SHOP</h2><div style="color:#ff0;margin-bottom:10px">Credits: '+G.credits+'</div>';
+  items.forEach((item,i)=>{
+    html+=`<div class="shop-item" onclick="buyItem(${i})">
+      <span style="color:#0ff">${item.name}</span>
+      <span style="color:#888">${item.stat}+${item.val}</span>
+      <span style="color:#ff0">${item.cost}cr</span></div>`;
+  });
+  html+='<div style="text-align:center;margin-top:10px"><button class="btn" onclick="closeOverlay()">Close</button></div>';
+  G.currentShop=items;
+  showOverlayHTML(html);
+}
+window.buyItem=function(i){
+  const item=G.currentShop[i];
+  if(G.credits>=item.cost){
+    G.credits-=item.cost;
+    if(item.type==='consumable'){
+      if(item.stat==='hp'){G.player.hp=Math.min(G.player.maxHp,G.player.hp+item.val);notify('Used '+item.name)}
+      else{G.inventory.push({...item});notify('Bought '+item.name)}
+    }else{
+      // Equipment: apply stat bonus
+      G.player[item.stat]=(G.player[item.stat]||0)+item.val;
+      if(item.stat==='hp'){G.player.maxHp+=item.val;G.player.hp+=item.val}
+      notify('Equipped '+item.name);
+    }
+    addLog(`Bought ${item.name} for ${item.cost}cr`,'log-info');
+    openShop(G.currentShop);
+  }else{notify('Not enough credits!')}
+};
+
+function showOverlayHTML(html){
+  const ov=document.getElementById('overlay-screen');
+  ov.style.display='flex';
+  ov.innerHTML='<div class="overlay-panel">'+html+'</div>';
+}
+function closeOverlay(){document.getElementById('overlay-screen').style.display='none'}
+window.closeOverlay=closeOverlay;
+
+function toggleInventory(){
+  const panel=document.getElementById('inventory-panel');
+  if(panel.style.display==='block'){panel.style.display='none';return}
+  closeAllPanels();panel.style.display='block';
+  let html='<h2>INVENTORY</h2>';
+  html+=`<div style="margin:10px 0;color:#888">
+    <div>HP: ${G.player.hp}/${G.player.maxHp} | ATK: ${G.player.attack} | DEF: ${G.player.defense}</div>
+    <div>Hacking: ${G.player.hacking} | Speed: ${G.player.speed.toFixed(1)}</div></div>`;
+  if(G.inventory.length===0)html+='<p style="color:#888">Empty</p>';
+  G.inventory.forEach((item,i)=>{
+    html+=`<div class="shop-item" onclick="useItem(${i})"><span style="color:#0ff">${item.name}</span><span style="color:#888">[Use]</span></div>`;
+  });
+  html+='<div style="text-align:center;margin-top:10px"><button class="btn" onclick="document.getElementById(\'inventory-panel\').style.display=\'none\'">Close</button></div>';
+  document.getElementById('inv-inner').innerHTML=html;
+}
+window.useItem=function(i){
+  const item=G.inventory[i];
+  if(item&&item.type==='consumable'){
+    if(item.stat==='hp')G.player.hp=Math.min(G.player.maxHp,G.player.hp+item.val);
+    else if(item.stat==='attack'){damageEntity(G.entities.filter(e=>e.active&&e.type==='enemy').sort((a,b)=>dist(G.player,a)-dist(G.player,b))[0]||G.player,item.val,G.player)}
+    G.inventory.splice(i,1);notify('Used '+item.name);toggleInventory();
   }
-  ctx.fillStyle = '#00ffcc';
-  ctx.beginPath();
-  ctx.arc(px, py, 12, 0, Math.PI*2);
-  ctx.fill();
-  // Direction indicator
-  ctx.strokeStyle = '#ff00ff';
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(px, py);
-  ctx.lineTo(px + Math.cos(G.player.facing)*18, py + Math.sin(G.player.facing)*18);
-  ctx.stroke();
-  ctx.lineWidth = 1;
-  ctx.globalAlpha = 1;
-  
-  // Player name
-  ctx.fillStyle = '#00ffcc';
-  ctx.font = '10px Courier New';
-  ctx.textAlign = 'center';
-  ctx.fillText(G.player.name, px, py - 18);
-  
-  // Minimap
-  renderMinimap();
-  
-  // Phase 4 wave info
-  if (G.phase === 4) {
-    ctx.fillStyle = '#ff0040';
-    ctx.font = '14px Courier New';
-    ctx.textAlign = 'left';
-    ctx.fillText('Wave: ' + G.phase4.wave + '/' + G.phase4.maxWaves, 10, canvas.height - 60);
-    ctx.fillText('Defeated: ' + G.phase4.enemiesDefeated, 10, canvas.height - 42);
-    ctx.fillText('Terminals: ' + G.phase4.zonesSecured + '/' + G.phase4.totalToSecure, 10, canvas.height - 24);
+};
+
+function toggleMap(){
+  const panel=document.getElementById('map-panel');
+  if(panel.style.display==='block'){panel.style.display='none';return}
+  closeAllPanels();panel.style.display='block';
+  const zones=[['industrial','corporate'],['slums','downtown']];
+  let html='<h2>NEO-TOKYO MAP</h2><div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin:10px 0">';
+  zones.forEach(row=>row.forEach(z=>{
+    const zd=G.zones[z];const cur=G.zone===z;
+    html+=`<div style="border:1px solid ${cur?'#0ff':'#555'};padding:15px;text-align:center;${cur?'background:rgba(0,255,255,0.1)':''}">
+      <div style="color:${zd.color};font-weight:bold">${zd.name}</div>
+      <div style="font-size:11px;color:#888">${z===G.zone?'[YOU ARE HERE]':''}</div></div>`;
+  }));
+  html+='</div>';
+  if(G.activeMission)html+=`<div style="color:#f0f;margin-top:10px">Active: ${G.activeMission.name}</div>`;
+  html+='<div style="text-align:center;margin-top:10px"><button class="btn" onclick="document.getElementById(\'map-panel\').style.display=\'none\'">Close</button></div>';
+  document.getElementById('map-inner').innerHTML=html;
+}
+
+function toggleMenu(){
+  const panel=document.getElementById('menu-panel');
+  if(panel.style.display==='block'){panel.style.display='none';return}
+  closeAllPanels();panel.style.display='block';
+  document.getElementById('menu-inner').innerHTML=`
+    <h2>MENU</h2>
+    <div style="text-align:center">
+      <button class="btn" onclick="saveGame();notify('Game Saved!');document.getElementById('menu-panel').style.display='none'">Save Game</button>
+      <button class="btn btn-magenta" onclick="document.getElementById('menu-panel').style.display='none'">Resume</button>
+    </div>
+    <div style="text-align:center;margin-top:15px">
+      <p style="color:#888;font-size:12px">WASD: Move | Click: Attack | E: Interact | H: Hack</p>
+      <p style="color:#888;font-size:12px">I: Inventory | M: Map | Q: Special | ESC: Menu</p>
+    </div>`;
+}
+
+function closeAllPanels(){
+  document.getElementById('inventory-panel').style.display='none';
+  document.getElementById('map-panel').style.display='none';
+  document.getElementById('menu-panel').style.display='none';
+  document.getElementById('overlay-screen').style.display='none';
+}
+// ============================================================
+// PHASE 3: SYSTEM BREACH - Wave Defense (PERFORMANCE CRITICAL)
+// ============================================================
+phases[3]={
+  wave:0,
+  maxWaves:8,
+  waveTimer:0,
+  waveSpawned:0,
+  waveKilled:0,
+  waveTarget:0,
+  zoneIdx:0,
+  breachZones:['downtown','slums','corporate','industrial'],
+  enter(){
+    const self=this;
+    G.running=true;self.wave=0;self.zoneIdx=0;
+    G.zone=self.breachZones[0];
+    G.player.x=1000;G.player.y=1000;G.player.hp=G.player.maxHp;
+    G.world={width:2000,height:2000};
+    showHUD();
+    notify('SYSTEM BREACH DETECTED - DEFEND NEO-TOKYO!');
+    addLog('Wave defense initiated!','log-info');
+    self.startWave();
+  },
+  startWave(){
+    const self=this;
+    self.wave++;
+    if(self.wave>self.maxWaves){
+      notify('ALL WAVES CLEARED!');
+      setTimeout(()=>setPhase(4),2000);
+      return;
+    }
+    // Switch zone every 2 waves
+    if(self.wave>1&&(self.wave-1)%2===0){
+      self.zoneIdx=(self.zoneIdx+1)%self.breachZones.length;
+      G.zone=self.breachZones[self.zoneIdx];
+      notify('Moving to: '+G.zones[G.zone].name);
+    }
+    self.waveTarget=Math.min(5+self.wave*2, MAX_ENEMIES);
+    self.waveSpawned=0;self.waveKilled=0;self.waveTimer=0;
+    notify(`Wave ${self.wave}/${self.maxWaves}`);
+    addLog(`Wave ${self.wave} - ${self.waveTarget} enemies incoming`,'log-info');
+    // Spawn initial batch (capped)
+    const initialSpawn=Math.min(6,self.waveTarget,MAX_ENEMIES);
+    for(let i=0;i<initialSpawn;i++){
+      const types=['grunt','grunt','enforcer','drone','cyber'];
+      const t=types[Math.min(randInt(0,self.wave),types.length-1)];
+      const angle=Math.random()*Math.PI*2;
+      const r=rand(400,800);
+      spawnEnemy(G.player.x+Math.cos(angle)*r,G.player.y+Math.sin(angle)*r,t,G.zone);
+      self.waveSpawned++;
+    }
+  },
+  update(dt){
+    const self=phases[3];
+    if(self.wave>self.maxWaves)return;
+    const activeEnemies=G.entities.filter(e=>e.active&&e.type==='enemy');
+    // Wave gating: spawn more only when below threshold
+    self.waveTimer-=dt;
+    if(self.waveTimer<=0&&self.waveSpawned<self.waveTarget&&activeEnemies.length<WAVE_THRESHOLD){
+      self.waveTimer=1500;
+      const toSpawn=Math.min(3,self.waveTarget-self.waveSpawned,MAX_ENEMIES-activeEnemies.length);
+      for(let i=0;i<toSpawn;i++){
+        const types=['grunt','enforcer','drone','cyber'];
+        const t=types[randInt(0,Math.min(self.wave-1,3))];
+        const angle=Math.random()*Math.PI*2;
+        const r=rand(500,900);
+        const ex=clamp(G.player.x+Math.cos(angle)*r,50,1950);
+        const ey=clamp(G.player.y+Math.sin(angle)*r,50,1950);
+        spawnEnemy(ex,ey,t,G.zone);
+        self.waveSpawned++;
+      }
+    }
+    // Count kills
+    const prevKilled=self.waveKilled;
+    self.waveKilled=self.waveSpawned-activeEnemies.length;
+    // Wave complete check
+    if(self.waveSpawned>=self.waveTarget&&activeEnemies.length===0){
+      const reward=100+self.wave*50;
+      G.credits+=reward;G.xp+=self.wave*30;checkLevelUp();
+      notify(`Wave ${self.wave} cleared! +${reward}cr`);
+      setTimeout(()=>self.startWave(),2000);
+    }
+    // Toggle panels
+    if(keys.i){keys.i=false;toggleInventory()}
+    if(keys.escape){keys.escape=false;toggleMenu()}
+    updateGameplay(dt);
+  },
+  render(){
+    renderWorld();renderEntities();renderParticles();renderPlayer();
+    // Wave indicator
+    const self=phases[3];
+    ctx.fillStyle='#f0f';ctx.font='16px monospace';ctx.textAlign='center';
+    ctx.fillText(`WAVE ${self.wave}/${self.maxWaves} - Enemies: ${G.entities.filter(e=>e.active&&e.type==='enemy').length}`,canvas.width/2,40);
+  },
+  exit(){
+    hideDialog();closeAllPanels();G.running=false;
+    // Clear ALL entities and particles for clean exit
+    G.entities.forEach(e=>{e.active=false});
+    G.particles.forEach(p=>{p.active=false});
   }
-  
-  // Phase 5 boss HP
-  if (G.phase === 5 && G.phase5.bossHp > 0) {
-    let bw = 400, bh = 20;
-    let bx = canvas.width/2 - bw/2, by = canvas.height - 50;
-    ctx.fillStyle = '#1a0000';
-    ctx.fillRect(bx, by, bw, bh);
-    ctx.fillStyle = '#ff0040';
-    ctx.fillRect(bx, by, bw * (G.phase5.bossHp / G.phase5.bossMaxHp), bh);
-    ctx.strokeStyle = '#ff0040';
-    ctx.strokeRect(bx, by, bw, bh);
-    ctx.fillStyle = '#fff';
-    ctx.font = '12px Courier New';
-    ctx.textAlign = 'center';
-    ctx.fillText('THE ARCHITECT', canvas.width/2, by - 5);
-  }
-  
-  // Mission tracker
-  if (G.missions.length > 0) {
-    ctx.fillStyle = '#00ffcc';
-    ctx.font = '11px Courier New';
-    ctx.textAlign = 'left';
-    let my = 200;
-    ctx.fillText('--- Missions ---', canvas.width - 200, my);
-    G.missions.forEach(m => {
-      my += 16;
-      ctx.fillStyle = '#ccc';
-      ctx.fillText(m.title, canvas.width - 200, my);
-      m.progress.forEach(o => {
-        my += 14;
-        ctx.fillStyle = o.current >= o.count ? '#00ff44' : '#888';
-        ctx.fillText('  ' + o.type + ': ' + o.current + '/' + o.count, canvas.width - 200, my);
+};
+
+// ============================================================
+// PHASE 4: THE CORE - Final Boss
+// ============================================================
+phases[4]={
+  boss:null,
+  bossPhase:0,
+  attackTimer:0,
+  patternTimer:0,
+  projectiles:[],
+  enter(){
+    const self=this;
+    G.running=true;G.zone='core';
+    G.player.x=600;G.player.y=800;G.player.hp=G.player.maxHp;
+    G.world={width:1200,height:1200};
+    showHUD();self.projectiles=[];
+    // Spawn boss
+    self.boss={x:600,y:300,w:48,h:56,hp:800+G.level*50,maxHp:800+G.level*50,
+      attack:25+G.level*2,defense:12,speed:1.5,color:'#f00',
+      active:true,type:'enemy',enemyType:'boss',
+      aiState:'idle',aiTimer:0,hitFlash:0,facing:1,
+      xpVal:500,creditVal:1000,
+      phase:0,attackCd:0};
+    G.entities.push(self.boss);
+    G.bossHP=self.boss.hp;G.bossMaxHP=self.boss.maxHp;
+    G.bossName='ARCHON - THE SIMULATION CORE';
+    document.getElementById('boss-hp').style.display='block';
+    document.getElementById('boss-name').textContent=G.bossName;
+    notify('ENTERING THE CORE...');
+    addLog('Final battle: ARCHON','log-dmg');
+    self.bossPhase=0;self.attackTimer=0;self.patternTimer=0;
+  },
+  update(dt){
+    const self=phases[4];
+    const boss=self.boss;
+    if(!boss||!boss.active||boss.hp<=0){
+      if(boss&&boss.hp<=0&&!self.victory){
+        self.victory=true;
+        document.getElementById('boss-hp').style.display='none';
+        G.credits+=boss.creditVal;G.xp+=boss.xpVal;checkLevelUp();
+        notify('ARCHON DESTROYED!');
+        for(let i=0;i<30;i++)spawnParticle(boss.x,boss.y,['#f00','#f0f','#0ff','#ff0'][randInt(0,3)],1000);
+        setTimeout(()=>showVictory(),3000);
+      }
+      return;
+    }
+    // Boss AI
+    boss.attackCd-=dt;self.patternTimer-=dt;
+    const d=dist(G.player,boss);
+    // Phase transitions
+    const hpPct=boss.hp/boss.maxHp;
+    if(hpPct<0.3&&self.bossPhase<2){
+      self.bossPhase=2;notify('ARCHON enters RAGE MODE!');boss.speed=2.5;boss.attack+=10;
+    }else if(hpPct<0.6&&self.bossPhase<1){
+      self.bossPhase=1;notify('ARCHON summons reinforcements!');
+      for(let i=0;i<3;i++){
+        const a=Math.PI*2*i/3;
+        spawnEnemy(boss.x+Math.cos(a)*200,boss.y+Math.sin(a)*200,'cyber','core');
+      }
+    }
+    // Boss movement: orbit player
+    const angle=Math.atan2(G.player.y-boss.y,G.player.x-boss.x);
+    if(d>200){
+      boss.x+=Math.cos(angle)*boss.speed*(dt/16);
+      boss.y+=Math.sin(angle)*boss.speed*(dt/16);
+    }else if(d<100){
+      boss.x-=Math.cos(angle)*boss.speed*(dt/16);
+      boss.y-=Math.sin(angle)*boss.speed*(dt/16);
+    }else{
+      // Strafe
+      boss.x+=Math.cos(angle+Math.PI/2)*boss.speed*0.5*(dt/16);
+      boss.y+=Math.sin(angle+Math.PI/2)*boss.speed*0.5*(dt/16);
+    }
+    boss.x=clamp(boss.x,50,G.world.width-50);
+    boss.y=clamp(boss.y,50,G.world.height-50);
+    // Boss attacks
+    if(boss.attackCd<=0){
+      boss.attackCd=2000-self.bossPhase*400;
+      // Spawn projectiles
+      const projCount=3+self.bossPhase*2;
+      for(let i=0;i<projCount;i++){
+        const a=angle+rand(-0.5,0.5);
+        self.projectiles.push({x:boss.x,y:boss.y,vx:Math.cos(a)*4,vy:Math.sin(a)*4,life:2000,dmg:boss.attack*0.5});
+      }
+      // Budget projectiles
+      while(self.projectiles.length>30)self.projectiles.shift();
+    }
+    // Update projectiles
+    for(let i=self.projectiles.length-1;i>=0;i--){
+      const pr=self.projectiles[i];
+      pr.x+=pr.vx*(dt/16);pr.y+=pr.vy*(dt/16);pr.life-=dt;
+      if(pr.life<=0){self.projectiles.splice(i,1);continue}
+      if(Math.abs(pr.x-G.player.x)<20&&Math.abs(pr.y-G.player.y)<20){
+        if(G.player.invuln<=0){damageEntity(G.player,pr.dmg,boss);G.player.invuln=300}
+        self.projectiles.splice(i,1);
+      }
+    }
+    // Update boss HP bar
+    G.bossHP=boss.hp;
+    document.getElementById('boss-hp-fill').style.width=(boss.hp/boss.maxHp*100)+'%';
+    // Hack opportunity at 50% and 25%
+    if(keys.h&&d<150){
+      keys.h=false;
+      startHackMinigame(5+self.bossPhase,()=>{
+        const hackDmg=Math.floor(boss.maxHp*0.1);
+        boss.hp-=hackDmg;boss.hitFlash=300;
+        notify(`NEURAL BREACH! ${hackDmg} damage!`);
+        addLog(`Hacked ARCHON for ${hackDmg}!`,'log-hack');
       });
+    }
+    if(keys.escape){keys.escape=false;toggleMenu()}
+    updateGameplay(dt);
+  },
+  render(){
+    // Core background
+    ctx.fillStyle='#050008';ctx.fillRect(0,0,canvas.width,canvas.height);
+    // Grid effect
+    ctx.strokeStyle='rgba(255,0,255,0.1)';ctx.lineWidth=1;
+    const ox=G.camera.x%50,oy=G.camera.y%50;
+    for(let x=-ox;x<canvas.width+50;x+=50){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,canvas.height);ctx.stroke()}
+    for(let y=-oy;y<canvas.height+50;y+=50){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(canvas.width,y);ctx.stroke()}
+    renderEntities();
+    // Render boss
+    const self=phases[4];
+    if(self.boss&&self.boss.active){
+      const bs=worldToScreen(self.boss.x,self.boss.y);
+      // Glow
+      ctx.shadowColor='#f00';ctx.shadowBlur=20+Math.sin(Date.now()/200)*10;
+      ctx.fillStyle=self.boss.hitFlash>0?'#fff':'#f00';
+      ctx.fillRect(bs.x-self.boss.w/2,bs.y-self.boss.h/2,self.boss.w,self.boss.h);
+      // Eye
+      ctx.fillStyle='#ff0';
+      ctx.beginPath();ctx.arc(bs.x,bs.y-8,6+Math.sin(Date.now()/300)*2,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#000';
+      ctx.beginPath();ctx.arc(bs.x,bs.y-8,3,0,Math.PI*2);ctx.fill();
+      ctx.shadowBlur=0;
+    }
+    // Render projectiles
+    self.projectiles.forEach(pr=>{
+      if(!isOnScreen(pr.x,pr.y))return;
+      const ps=worldToScreen(pr.x,pr.y);
+      ctx.fillStyle='#f44';ctx.shadowColor='#f00';ctx.shadowBlur=8;
+      ctx.beginPath();ctx.arc(ps.x,ps.y,4,0,Math.PI*2);ctx.fill();
+      ctx.shadowBlur=0;
+    });
+    renderParticles();renderPlayer();
+  },
+  exit(){
+    hideDialog();closeAllPanels();G.running=false;
+    document.getElementById('boss-hp').style.display='none';
+    this.projectiles=[];this.victory=false;
+  }
+};
+
+function showVictory(){
+  G.running=false;
+  const ov=document.getElementById('overlay-screen');
+  ov.style.display='flex';
+  ov.innerHTML=`<div class="overlay-panel">
+    <h1 style="color:#0f0">SIMULATION TERMINATED</h1>
+    <p style="text-align:center;margin:20px 0;color:#0ff;font-size:16px">
+      You did it, ${G.player.name}. The Archon is destroyed.<br>
+      The simulation fractures around you as reality reasserts itself.<br><br>
+      <span style="color:#f0f">Level ${G.level} ${G.player.cls}</span><br>
+      Credits earned: ${G.credits}<br>
+      Enemies destroyed: countless<br><br>
+      The city of Neo-Tokyo is free. For now.
+    </p>
+    <div style="text-align:center">
+      <button class="btn btn-green" onclick="localStorage.removeItem('simulation_save');location.reload()">NEW GAME</button>
+      <button class="btn btn-magenta" onclick="closeOverlay()">FREEPLAY</button>
+    </div>
+  </div>`;
+}
+// ============================================================
+// GAMEPLAY UPDATE (shared by all action phases)
+// ============================================================
+function updateGameplay(dt){
+  const p=G.player;if(!p)return;
+  const spd=p.speed*(dt/16);
+  // Movement
+  let mx=0,my=0;
+  if(keys.w||keys.arrowup)my=-1;
+  if(keys.s||keys.arrowdown)my=1;
+  if(keys.a||keys.arrowleft){mx=-1;p.facing=-1}
+  if(keys.d||keys.arrowright){mx=1;p.facing=1}
+  if(mx||my){const len=Math.hypot(mx,my);mx/=len;my/=len}
+  p.x=clamp(p.x+mx*spd,20,G.world.width-20);
+  p.y=clamp(p.y+my*spd,20,G.world.height-20);
+  // Invulnerability
+  if(p.invuln>0)p.invuln-=dt;
+  if(p.attackTimer>0)p.attackTimer-=dt;
+  // Cooldowns
+  p.abilities.forEach((a,i)=>{
+    if(p.cooldowns[a.type]>0){p.cooldowns[a.type]-=dt}
+    const cdEl=document.getElementById('cd-'+i);
+    if(cdEl){
+      if(p.cooldowns[a.type]>0){cdEl.style.display='block';cdEl.textContent=Math.ceil(p.cooldowns[a.type]/1000)}
+      else cdEl.style.display='none';
+    }
+  });
+  // Attack on click
+  if(mouseClicked){
+    mouseClicked=false;
+    const meleeAbility=p.abilities[0];
+    if(p.cooldowns.melee<=0){
+      p.cooldowns.melee=meleeAbility.cd;p.attacking=true;p.attackTimer=200;
+      // Find nearest enemy in range
+      const enemies=G.entities.filter(e=>e.active&&e.type==='enemy');
+      const nearest=enemies.sort((a,b)=>dist(p,a)-dist(p,b))[0];
+      if(nearest&&dist(p,nearest)<meleeAbility.range){
+        damageEntity(nearest,p.attack*meleeAbility.dmgMul,p);
+        for(let i=0;i<3;i++)spawnParticle(nearest.x,nearest.y,'#0ff',200);
+      }
+    }
+  }
+  // Special ability (Q key)
+  if(keys.q){
+    keys.q=false;
+    const special=p.abilities[2];
+    if(special&&p.cooldowns.cyber<=0){
+      p.cooldowns.cyber=special.cd;
+      const enemies=G.entities.filter(e=>e.active&&e.type==='enemy');
+      if(special.type==='cyber'){
+        // Neural spike - damages all in range
+        enemies.forEach(e=>{
+          if(dist(p,e)<special.range){
+            damageEntity(e,p.attack*special.dmgMul+p.hacking,p);
+            for(let i=0;i<5;i++)spawnParticle(e.x,e.y,'#f0f',400);
+          }
+        });
+        addLog('Neural Spike!','log-hack');
+      }else if(special.type==='melee'){
+        // Blade storm
+        enemies.forEach(e=>{
+          if(dist(p,e)<special.range){
+            damageEntity(e,p.attack*special.dmgMul,p);
+            for(let i=0;i<5;i++)spawnParticle(e.x,e.y,'#f80',400);
+          }
+        });
+        addLog('Blade Storm!','log-info');
+      }else{
+        // Turret: spawn a temporary ally
+        const nearest=enemies.sort((a,b)=>dist(p,a)-dist(p,b))[0];
+        if(nearest){
+          damageEntity(nearest,p.attack*special.dmgMul,p);
+          for(let i=0;i<8;i++)spawnParticle(p.x+p.facing*30,p.y-10,'#ff0',300);
+        }
+        addLog('Turret deployed!','log-info');
+      }
+    }
+  }
+  // Enemy AI
+  G.entities.forEach(e=>{
+    if(!e.active||e.type!=='enemy')return;
+    e.hitFlash=Math.max(0,(e.hitFlash||0)-dt);
+    e.attackCd=Math.max(0,(e.attackCd||0)-dt);
+    e.aiTimer=(e.aiTimer||0)+1;
+    const onScreen=isOnScreen(e.x,e.y,200);
+    // AI throttling: off-screen enemies update every 4th frame
+    if(!onScreen&&e.aiTimer%4!==0)return;
+    const d2=dist(p,e);
+    if(d2<300){
+      // Chase player
+      const ang=Math.atan2(p.y-e.y,p.x-e.x);
+      e.x+=Math.cos(ang)*e.speed*(dt/16);
+      e.y+=Math.sin(ang)*e.speed*(dt/16);
+      e.facing=p.x>e.x?1:-1;
+      // Attack
+      if(d2<45&&e.attackCd<=0){
+        e.attackCd=1500;
+        if(p.invuln<=0){damageEntity(p,e.attack,e);p.invuln=300}
+      }
+    }else if(e.aiState==='patrol'){
+      // Patrol
+      const td=dist(e,{x:e.targetX||e.x,y:e.targetY||e.y});
+      if(td<20){e.targetX=e.x+rand(-200,200);e.targetY=e.y+rand(-200,200)}
+      const ang=Math.atan2((e.targetY||e.y)-e.y,(e.targetX||e.x)-e.x);
+      e.x+=Math.cos(ang)*e.speed*0.5*(dt/16);
+      e.y+=Math.sin(ang)*e.speed*0.5*(dt/16);
+    }
+    e.x=clamp(e.x,20,G.world.width-20);
+    e.y=clamp(e.y,20,G.world.height-20);
+  });
+  // Update particles
+  G.particles.forEach(pp=>{
+    if(!pp.active)return;
+    pp.x+=pp.vx*(dt/16);pp.y+=pp.vy*(dt/16);pp.life-=dt;
+    if(pp.life<=0)pp.active=false;
+  });
+  updateCamera();updateHUD();
+}
+
+// ============================================================
+// RENDERING
+// ============================================================
+function renderWorld(){
+  const zd=G.zones[G.zone];
+  // Background
+  ctx.fillStyle='#0a0a12';ctx.fillRect(0,0,canvas.width,canvas.height);
+  // Grid
+  const gridColor=zd?zd.color:'#0ff';
+  ctx.strokeStyle=gridColor+'22';ctx.lineWidth=1;
+  const ox=G.camera.x%60,oy=G.camera.y%60;
+  for(let x=-ox;x<canvas.width+60;x+=60){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,canvas.height);ctx.stroke()}
+  for(let y=-oy;y<canvas.height+60;y+=60){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(canvas.width,y);ctx.stroke()}
+  // World bounds
+  const tl=worldToScreen(0,0);const br=worldToScreen(G.world.width,G.world.height);
+  ctx.strokeStyle='#f0055';ctx.lineWidth=2;
+  ctx.strokeRect(tl.x,tl.y,br.x-tl.x,br.y-tl.y);
+}
+
+function renderZoneFeatures(){
+  const zd=G.zones[G.zone];if(!zd)return;
+  // NPCs
+  if(zd.npcs){
+    zd.npcs.forEach(npc=>{
+      if(!isOnScreen(npc.x,npc.y))return;
+      const s=worldToScreen(npc.x,npc.y);
+      ctx.fillStyle='#0ff';ctx.fillRect(s.x-10,s.y-16,20,32);
+      ctx.fillStyle='#000';ctx.fillRect(s.x-6,s.y-10,12,6);
+      ctx.fillStyle='#ff0';ctx.font='10px monospace';ctx.textAlign='center';
+      ctx.fillText(npc.name,s.x,s.y-22);
+      if(dist(G.player,npc)<60){
+        ctx.fillStyle='#0f0';ctx.fillText('[E] Talk',s.x,s.y+24);
+      }
+    });
+  }
+  // Terminals
+  if(zd.terminals){
+    zd.terminals.forEach(t=>{
+      if(!isOnScreen(t.x,t.y))return;
+      const s=worldToScreen(t.x,t.y);
+      ctx.fillStyle=t.hacked?'#555':'#0f0';
+      ctx.fillRect(s.x-12,s.y-12,24,24);
+      ctx.strokeStyle=t.hacked?'#333':'#0ff';
+      ctx.strokeRect(s.x-14,s.y-14,28,28);
+      ctx.fillStyle=t.hacked?'#555':'#0f0';ctx.font='10px monospace';ctx.textAlign='center';
+      ctx.fillText(t.hacked?'HACKED':'TERMINAL',s.x,s.y-18);
+      if(!t.hacked&&dist(G.player,t)<60){
+        ctx.fillStyle='#0f0';ctx.fillText('[H] Hack',s.x,s.y+24);
+      }
     });
   }
 }
 
-function renderMinimap() {
-  let mc = minimapCtx;
-  mc.fillStyle = '#0a0a1a';
-  mc.fillRect(0, 0, 150, 150);
-  let tiles = G.zones[G.zone];
-  if (!tiles) return;
-  let sx = 150/ZONE_W, sy = 150/ZONE_H;
-  let colors = ZONE_COLORS[G.zone] || ZONE_COLORS.downtown;
-  for (let y = 0; y < ZONE_H; y++) {
-    for (let x = 0; x < ZONE_W; x++) {
-      if (tiles[y][x] === 1) {
-        mc.fillStyle = colors.wall;
-        mc.fillRect(x*sx, y*sy, sx+1, sy+1);
-      }
+function renderEntities(){
+  G.entities.forEach(e=>{
+    if(!e.active||e.type!=='enemy')return;
+    // Viewport culling
+    if(!isOnScreen(e.x,e.y))return;
+    const s=worldToScreen(e.x,e.y);
+    const flash=e.hitFlash>0;
+    ctx.fillStyle=flash?'#fff':e.color;
+    if(e.enemyType==='boss'){
+      // Boss rendered separately in phase 4
+      return;
     }
-  }
-  // Enemies on minimap
-  mc.fillStyle = '#ff4444';
-  for (let e of enemyPool) {
-    if (!e.active) continue;
-    mc.fillRect(e.x/TILE*sx-1, e.y/TILE*sy-1, 2, 2);
-  }
-  // Player on minimap
-  mc.fillStyle = '#00ffcc';
-  mc.fillRect(G.player.x/TILE*sx-2, G.player.y/TILE*sy-2, 4, 4);
-  // NPCs on minimap
-  mc.fillStyle = '#ffcc00';
-  for (let n of G.npcs) {
-    mc.fillRect(n.x/TILE*sx-1, n.y/TILE*sy-1, 2, 2);
-  }
+    ctx.fillRect(s.x-e.w/2,s.y-e.h/2,e.w,e.h);
+    // Eyes
+    ctx.fillStyle='#000';
+    const eyeX=s.x+e.facing*3;
+    ctx.fillRect(eyeX-2,s.y-e.h/4,4,3);
+    // HP bar
+    if(e.hp<e.maxHp){
+      const bw=e.w+4;
+      ctx.fillStyle='#300';ctx.fillRect(s.x-bw/2,s.y-e.h/2-8,bw,4);
+      ctx.fillStyle='#f00';ctx.fillRect(s.x-bw/2,s.y-e.h/2-8,bw*(e.hp/e.maxHp),4);
+    }
+  });
 }
 
-// --- SAVE / LOAD ---
-function saveGame() {
-  try {
-    let save = {
-      phase: G.phase, zone: G.zone, player: G.player,
-      completedMissions: G.completedMissions,
-      phase4: G.phase4, zones: G.zones
-    };
-    localStorage.setItem('simulation_save', JSON.stringify(save));
-  } catch(e) {}
+function renderParticles(){
+  G.particles.forEach(pp=>{
+    if(!pp.active)return;
+    if(!isOnScreen(pp.x,pp.y))return;
+    const s=worldToScreen(pp.x,pp.y);
+    const alpha=pp.life/pp.maxLife;
+    ctx.globalAlpha=alpha;
+    ctx.fillStyle=pp.color;
+    ctx.fillRect(s.x-pp.size/2,s.y-pp.size/2,pp.size,pp.size);
+    ctx.globalAlpha=1;
+  });
 }
 
-function loadGame() {
-  try {
-    let data = JSON.parse(localStorage.getItem('simulation_save'));
-    if (!data) { notify('No save found!'); return; }
-    G.player = data.player;
-    G.phase = data.phase;
-    G.zone = data.zone;
-    G.completedMissions = data.completedMissions || [];
-    G.phase4 = data.phase4 || G.phase4;
-    if (data.zones) G.zones = data.zones;
-    else initZones();
-    document.getElementById('menu-screen').style.display = 'none';
-    setupNPCs(G.zone);
-    if (G.phase >= 3) spawnZoneEnemies(G.zone);
-    G.running = true;
-    document.getElementById('hud').style.display = 'block';
-    updateHUD();
-    notify('Game loaded - Phase ' + G.phase);
-  } catch(e) { notify('No save found!'); }
+function renderPlayer(){
+  const p=G.player;if(!p)return;
+  const s=worldToScreen(p.x,p.y);
+  // Invuln flash
+  if(p.invuln>0&&Math.floor(p.invuln/100)%2===0)return;
+  // Body
+  ctx.fillStyle='#0ff';
+  ctx.fillRect(s.x-p.w/2,s.y-p.h/2,p.w,p.h);
+  // Visor
+  ctx.fillStyle='#f0f';
+  const visorX=s.x+p.facing*2;
+  ctx.fillRect(visorX-5,s.y-p.h/4,10,4);
+  // Attack visual
+  if(p.attacking&&p.attackTimer>0){
+    ctx.strokeStyle='#0ff';ctx.lineWidth=2;
+    ctx.beginPath();
+    ctx.arc(s.x+p.facing*20,s.y,25,0,Math.PI*2);
+    ctx.stroke();
+  }
+  // Player name
+  ctx.fillStyle='#0ff';ctx.font='10px monospace';ctx.textAlign='center';
+  ctx.fillText(p.name,s.x,s.y-p.h/2-8);
 }
 
-// --- MAIN GAME LOOP ---
-// CRITICAL FIX: Delta capping prevents death spiral that caused Phase 4 freeze
-let lastTime = 0;
-function gameLoop(timestamp) {
-  let rawDelta = timestamp - lastTime;
-  let dt = Math.min(rawDelta, MAX_DELTA); // PREVENTS DEATH SPIRAL
-  lastTime = timestamp;
-  
-  update(dt);
-  render();
+// ============================================================
+// MAIN GAME LOOP (requestAnimationFrame + delta capping)
+// ============================================================
+function gameLoop(timestamp){
+  if(!G.lastTime)G.lastTime=timestamp;
+  let dt=timestamp-G.lastTime;
+  G.lastTime=timestamp;
+  // Delta time capping - prevents death spiral
+  dt=Math.min(dt,MAX_DELTA);
+  G.frameCount++;
+  if(G.running&&currentPhase){
+    if(currentPhase.update)currentPhase.update(dt);
+  }
+  // Render
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  if(currentPhase&&currentPhase.render)currentPhase.render();
+  mouseClicked=false;
   requestAnimationFrame(gameLoop);
 }
 
-// --- START ---
+// ============================================================
+// TITLE / INIT
+// ============================================================
+function showTitle(){
+  const ov=document.getElementById('overlay-screen');
+  ov.style.display='flex';
+  ov.innerHTML=`<div class="overlay-panel" style="text-align:center">
+    <h1 style="font-size:36px;margin-bottom:5px">THE SIMULATION</h1>
+    <p style="color:#888;margin-bottom:30px">A Cyberpunk RPG</p>
+    <div style="margin:20px 0">
+      <button class="btn btn-magenta" id="btn-new" style="font-size:18px;padding:15px 40px">NEW GAME</button>
+    </div>
+    <div id="continue-div" style="display:none;margin:10px 0">
+      <button class="btn btn-green" id="btn-continue" style="font-size:16px;padding:12px 30px">CONTINUE</button>
+    </div>
+    <p style="color:#555;font-size:11px;margin-top:20px">WASD: Move | Click: Attack | E: Interact | H: Hack | Q: Special<br>I: Inventory | M: Map | ESC: Menu</p>
+  </div>`;
+  document.getElementById('btn-new').addEventListener('click',()=>{
+    ov.style.display='none';setPhase(0);
+  });
+  // Check for save
+  if(localStorage.getItem('simulation_save')){
+    document.getElementById('continue-div').style.display='block';
+    document.getElementById('btn-continue').addEventListener('click',()=>{
+      ov.style.display='none';
+      G.player=makePlayer('Ghost','netrunner');
+      if(loadGame()){
+        setPhase(G.phase);
+      }else{
+        setPhase(0);
+      }
+    });
+  }
+}
+
+// Start
+showTitle();
 requestAnimationFrame(gameLoop);
 </script>
-</body></html>
+</body>
+</html>
