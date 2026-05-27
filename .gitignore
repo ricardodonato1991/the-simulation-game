@@ -1,0 +1,15 @@
+node_modules/
+dist/
+build/
+.DS_Store
+*.log
+npm-debug.log*
+
+# Echo's learned memory is local to each machine
+server/data/*.json
+!server/data/.gitkeep
+
+.env
+.env.local
+.vscode/
+.idea/
