@@ -1,5 +1,8 @@
 // Central configuration for ECHO. Override anything via environment variables.
 
+import os from "node:os";
+import path from "node:path";
+
 export const config = {
   port: Number(process.env.ECHO_PORT ?? 3001),
 
@@ -25,4 +28,18 @@ export const config = {
   maxCommsInMemory: 200,
   maxAgentCommsInMemory: 200,
   maxLearningsInMemory: 500,
+
+  // --- action layer (ECHO acting on the Mac) ---
+
+  // Root ECHO's file actions are scoped to. Defaults to the home directory.
+  workspace: process.env.ECHO_WORKSPACE ? path.resolve(process.env.ECHO_WORKSPACE) : os.homedir(),
+
+  // Whether ECHO may run shell commands. On by default for a private local
+  // system; set ECHO_ALLOW_SHELL=0 to lock it down.
+  allowShell: process.env.ECHO_ALLOW_SHELL !== "0",
+
+  // Hard caps for action output so a runaway command can't flood the UI.
+  maxActionBytes: 16000,
+  shellTimeoutMs: Number(process.env.ECHO_SHELL_TIMEOUT ?? 15000),
 };
+

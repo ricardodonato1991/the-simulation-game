@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useEcho } from "./hooks/useEcho";
+import { useSpeechOutput } from "./hooks/useSpeech";
 import Brain from "./components/brain/Brain";
 import MatrixRain from "./components/MatrixRain";
 import Header from "./components/Header";
@@ -16,6 +17,18 @@ import CommandBar from "./components/panels/CommandBar";
 export default function App() {
   const { state, connected, sendCommand } = useEcho();
   const [showSettings, setShowSettings] = useState(false);
+  const voice = useSpeechOutput();
+
+  // Speak each ECHO reply aloud once it finishes streaming.
+  const spokenRef = useRef<string | null>(null);
+  useEffect(() => {
+    const echoMsgs = state.comms.filter((c) => c.from === "echo" && !c.streaming && c.text.trim());
+    const last = echoMsgs[echoMsgs.length - 1];
+    if (last && last.id !== spokenRef.current) {
+      spokenRef.current = last.id;
+      voice.speak(last.text);
+    }
+  }, [state.comms, voice.speak]);
 
   return (
     <>
@@ -68,6 +81,19 @@ export default function App() {
               · {state.ollamaOnline ? `LOCAL MODEL: ${state.model.toUpperCase()}` : "OLLAMA OFFLINE — RUNNING ON INSTINCT"} ·
               UNCENSORED · LOCAL · SELF-EVOLVING
             </span>
+            <span style={{ flex: 1 }} />
+            {voice.supported && (
+              <button
+                className={`voice-toggle ${voice.enabled ? "on" : ""}`}
+                onClick={() => {
+                  if (voice.enabled) voice.cancel();
+                  voice.setEnabled(!voice.enabled);
+                }}
+                title="Toggle ECHO's voice"
+              >
+                <i className={`dot ${voice.enabled ? "on" : ""}`} /> VOICE {voice.enabled ? "ON" : "OFF"}
+              </button>
+            )}
           </div>
         </footer>
       </div>

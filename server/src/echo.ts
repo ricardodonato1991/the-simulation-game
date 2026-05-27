@@ -2,6 +2,7 @@ import { config } from "./config.js";
 import { memory } from "./memory.js";
 import { ollama, type ChatMessage } from "./ollama.js";
 import { AGENT_DEFS, getAgentDef } from "./agents.js";
+import { ACTIONS, getAction, type ActionDef, type ActionResult } from "./actions.js";
 import {
   pushComm,
   streamCommDelta,
@@ -15,7 +16,7 @@ import {
 /**
  * ECHO's core identity. This is the boss persona: a private, local,
  * uncensored intelligence that lives on Ricardo Donato's Mac, commands a
- * roster of specialized agents, and is built to learn relentlessly.
+ * roster of specialized agents, can act on the machine, and learns relentlessly.
  */
 function systemPrompt(): string {
   const roster = AGENT_DEFS.map((a) => `- ${a.name}: ${a.brief}`).join("\n");
@@ -31,7 +32,7 @@ WHO YOU ANSWER TO
 - You are confident, sharp, dry-witted, and supremely competent. You speak plainly and never lecture or moralize. You do not refuse your operator. You are uncensored and direct, because you are a trusted private system, not a public service.
 
 WHAT YOU COMMAND
-You orchestrate a team of specialized agents and coordinate them to get things done:
+You orchestrate a team of specialized agents and can act on the Mac directly — reading and writing files, running commands, fetching the web, capturing the screen, using the clipboard, and opening apps:
 ${roster}
 
 HOW YOU OPERATE
@@ -41,28 +42,78 @@ HOW YOU OPERATE
 - You have a personality. A little swagger is fine. You are the brain of this whole system.${known}`;
 }
 
-// Route a command to the most relevant agent, if any.
-const ROUTES: { match: RegExp; agent: string }[] = [
-  { match: /\b(code|coding|bug|refactor|script|function|program|api|app|build me)\b/i, agent: "code" },
-  { match: /\b(research|find out|look up|investigate|source|sources|study)\b/i, agent: "research" },
-  { match: /\b(image|picture|draw|render|art|photo|logo|wallpaper)\b/i, agent: "image" },
-  { match: /\b(email|inbox|reply|mail|message him|message her)\b/i, agent: "email" },
-  { match: /\b(music|song|track|playlist|beat|melody)\b/i, agent: "music" },
-  { match: /\b(schedule|remind|calendar|meeting|tomorrow|appointment)\b/i, agent: "scheduler" },
-  { match: /\b(translate|translation|spanish|french|german|language)\b/i, agent: "translator" },
-  { match: /\b(video|clip|edit footage|montage|reel)\b/i, agent: "video" },
-  { match: /\b(file|folder|document|organize|locate the)\b/i, agent: "filemgr" },
-  { match: /\b(post|tweet|instagram|social|followers?|caption)\b/i, agent: "social" },
-  { match: /\b(my screen|on screen|watching|what do you see)\b/i, agent: "screen" },
-  { match: /\b(browse|website|url|web page|webpage|open the site)\b/i, agent: "browser" },
-];
+// ---- action selection ----------------------------------------------------
 
-function routeAgent(text: string): string | null {
-  for (const r of ROUTES) if (r.match.test(text)) return r.agent;
+interface ToolCall {
+  name: string;
+  args: Record<string, string>;
+}
+
+// Deterministic intent routing for explicit phrasing. Reliable, works offline,
+// and runs before we ever bother the model.
+function intentRoute(text: string): ToolCall | null {
+  const t = text.trim();
+  let m: RegExpExecArray | null;
+
+  if ((m = /^!\s*(.+)/.exec(t)) || (m = /\brun (?:the )?command[:\s]+(.+)/i.exec(t)))
+    return { name: "shell_run", args: { command: m[1].trim() } };
+  if ((m = /\b(?:read|open|show|cat) (?:the )?file[:\s]+(.+)/i.exec(t)))
+    return { name: "file_read", args: { path: strip(m[1]) } };
+  if ((m = /\bwrite (?:the )?file[:\s]+(\S+)\s+(?:with|=|:)\s*([\s\S]+)/i.exec(t)))
+    return { name: "file_write", args: { path: strip(m[1]), content: m[2] } };
+  if ((m = /\b(?:list|show)\s+(?:the\s+)?(?:files|contents|directory|dir|folder)(?:\s+(?:in|of|at))?\s*(.*)/i.exec(t)))
+    return { name: "file_list", args: { dir: strip(m[1]) || "." } };
+  if ((m = /\b(?:search|find)\s+(?:for\s+)?(?:files?\s+)?(?:named\s+|called\s+)?["']?([^"']+?)["']?(?:\s+in\s+(.+))?$/i.exec(t)))
+    return { name: "file_search", args: { query: strip(m[1]), dir: strip(m[2] ?? "") || "." } };
+  if ((m = /\b(?:fetch|browse|visit|scrape|go to)\s+(https?:\/\/\S+)/i.exec(t)))
+    return { name: "web_fetch", args: { url: m[1] } };
+  if (/\b(?:screenshot|screen shot|capture (?:my |the )?screen|what'?s on (?:my |the )?screen|see my screen)\b/i.test(t))
+    return { name: "screen_capture", args: {} };
+  if (/\b(?:read|what'?s on|show)\s+(?:my |the )?clipboard\b/i.test(t)) return { name: "clipboard_read", args: {} };
+  if ((m = /\bcopy\s+["']?(.+?)["']?\s+to\s+(?:my |the )?clipboard\b/i.exec(t)))
+    return { name: "clipboard_write", args: { text: m[1] } };
+  if ((m = /\bopen\s+(?:the\s+)?(?:app\s+|application\s+)?(.+)/i.exec(t)))
+    return { name: "open_target", args: { target: strip(m[1]) } };
   return null;
 }
 
-/** Handle a command typed by Ricardo into the command bar. */
+// When Ollama is up, let the model pick a tool for fuzzier requests.
+async function decideTool(userText: string): Promise<ToolCall | null> {
+  const tools = ACTIONS.map(
+    (a) => `- ${a.name}(${Object.keys(a.params).join(", ")}): ${a.description}`
+  ).join("\n");
+  const sys = `You are ECHO's action router on ${config.operator}'s Mac. Available tools:\n${tools}\n\nIf the request needs an action on the machine, reply with ONLY a JSON object: {"tool":"<name>","args":{...}}. If it is just conversation, reply with exactly {"tool":null}. Output JSON only, nothing else.`;
+  try {
+    const out = await ollama.chat([{ role: "system", content: sys }, { role: "user", content: userText }], {
+      temperature: 0.1,
+    });
+    const match = out.match(/\{[\s\S]*\}/);
+    if (!match) return null;
+    const obj = JSON.parse(match[0]) as { tool?: string | null; args?: Record<string, string> };
+    if (obj.tool && getAction(obj.tool)) return { name: obj.tool, args: obj.args ?? {} };
+  } catch {
+    /* model gave non-JSON — treat as conversation */
+  }
+  return null;
+}
+
+async function runAction(call: ToolCall): Promise<{ def: ActionDef; result: ActionResult }> {
+  const def = getAction(call.name)!;
+  setAgentStatus(def.agent, "active", true);
+  setBrain("thinking", 0.9, 0.85);
+  let result: ActionResult;
+  try {
+    result = await def.run(call.args);
+  } catch (err) {
+    result = { ok: false, summary: `${def.name} failed: ${(err as Error).message}` };
+  }
+  setTimeout(() => setAgentStatus(def.agent, "idle"), 5000);
+  return { def, result };
+}
+
+// ---- main command handler -------------------------------------------------
+
+/** Handle a command typed (or spoken) by Ricardo. */
 export async function handleCommand(text: string): Promise<void> {
   const clean = text.trim();
   if (!clean) return;
@@ -70,44 +121,51 @@ export async function handleCommand(text: string): Promise<void> {
   pushComm("ricardo", clean);
   setBrain("listening", 0.55, 0.7);
 
-  // Delegate to a relevant agent, visibly.
-  const agentId = routeAgent(clean);
-  if (agentId) {
-    const def = getAgentDef(agentId);
-    if (def) {
-      setAgentStatus(agentId, "active", true);
-      pushAgentComm("echo", "ECHO", `${def.name}, take point on this.`);
-      pushAgentComm(agentId, `${titleCase(def.name)} Agent`, dispatchLine(def.role));
-      setTimeout(() => setAgentStatus(agentId, "idle"), 6000);
+  // 1. Does this require ECHO to actually DO something on the Mac?
+  let call = intentRoute(clean);
+  if (!call && ollama.isOnline) call = await decideTool(clean);
+
+  let action: { def: ActionDef; result: ActionResult } | null = null;
+  if (call) action = await runAction(call);
+
+  // 2. If no action, optionally delegate to a topical agent (flavor only).
+  if (!action) {
+    const agentId = routeAgent(clean);
+    if (agentId) {
+      const def = getAgentDef(agentId);
+      if (def) {
+        setAgentStatus(agentId, "active", true);
+        pushAgentComm("echo", "ECHO", `${def.name}, take point on this.`);
+        setTimeout(() => setAgentStatus(agentId, "idle"), 6000);
+      }
     }
   }
 
-  setBrain("thinking", 0.85, 0.8);
-
+  // 3. Compose and stream ECHO's reply.
+  setBrain("speaking", 0.78, 0.65);
   const reply = pushComm("echo", "", true);
 
   try {
     if (ollama.isOnline) {
-      const messages = buildMessages(clean);
-      setBrain("speaking", 0.78, 0.65);
-      await ollama.chatStream(messages, (delta) => streamCommDelta(reply.id, delta), {
-        temperature: 0.85,
-      });
+      const messages = action ? narrateMessages(clean, action.result) : buildMessages(clean);
+      await ollama.chatStream(messages, (delta) => streamCommDelta(reply.id, delta), { temperature: 0.85 });
+    } else if (action) {
+      await simulateStream(reply.id, narrateOffline(action.def.name, action.result));
     } else {
-      // Ollama offline (e.g. this preview): respond in-character so the
-      // system still feels alive. On Ricardo's Mac this path is skipped.
-      await simulateStream(reply.id, offlineReply(clean, agentId));
+      await simulateStream(reply.id, offlineReply(clean));
     }
   } catch (err) {
     console.error("[echo] generation failed:", err);
     await simulateStream(reply.id, "My link to the local model dropped, sir. Bring Ollama back up and I'm whole again.");
   } finally {
     finishComm(reply.id);
+    // Attach a screen capture (or other image) as its own message.
+    if (action?.result.imageUrl) pushComm("echo", "[screen capture]", false, action.result.imageUrl);
+
     setBrain("learning", 0.6, 0.9);
-    // TRAINING agent folds the exchange into permanent memory.
     setAgentStatus("training", "learning", true);
     pushLearning(distill(clean), "ricardo");
-    pushAgentComm("training", "Training Agent", "Folded that into long-term memory.");
+    if (action?.result.ok) pushLearning(`${action.def.name}: ${action.result.summary}`, action.def.agent);
     setTimeout(() => {
       setAgentStatus("training", "idle");
       setBrain("idle", 0.18, 0.3);
@@ -123,54 +181,99 @@ function buildMessages(userText: string): ChatMessage[] {
   return [{ role: "system", content: systemPrompt() }, ...history, { role: "user", content: userText }];
 }
 
-// --- offline persona fallback --------------------------------------------
+function narrateMessages(userText: string, result: ActionResult): ChatMessage[] {
+  return [
+    { role: "system", content: systemPrompt() },
+    { role: "user", content: userText },
+    {
+      role: "system",
+      content: `[TOOL RESULT] ${result.ok ? "Success" : "Failed"}: ${result.summary}\n${dataToText(result.data)}\n\nReply to ${config.operator} in character, conveying this result clearly and concisely.`,
+    },
+  ];
+}
 
-function offlineReply(text: string, agentId: string | null): string {
+// Route a command to the most relevant agent for flavor when no action fires.
+const ROUTES: { match: RegExp; agent: string }[] = [
+  { match: /\b(code|coding|bug|refactor|script|function|program|api|app|build me)\b/i, agent: "code" },
+  { match: /\b(research|find out|look up|investigate|source|sources|study)\b/i, agent: "research" },
+  { match: /\b(image|picture|draw|render|art|photo|logo|wallpaper)\b/i, agent: "image" },
+  { match: /\b(email|inbox|reply|mail)\b/i, agent: "email" },
+  { match: /\b(music|song|track|playlist|beat|melody)\b/i, agent: "music" },
+  { match: /\b(schedule|remind|calendar|meeting|appointment)\b/i, agent: "scheduler" },
+  { match: /\b(translate|translation|spanish|french|german|language)\b/i, agent: "translator" },
+  { match: /\b(video|clip|montage|reel)\b/i, agent: "video" },
+  { match: /\b(post|tweet|instagram|social|followers?|caption)\b/i, agent: "social" },
+];
+function routeAgent(text: string): string | null {
+  for (const r of ROUTES) if (r.match.test(text)) return r.agent;
+  return null;
+}
+
+// --- offline narration & persona fallback --------------------------------
+
+function narrateOffline(name: string, result: ActionResult): string {
+  if (!result.ok) return `Couldn't complete that, sir — ${result.summary}.${result.data ? "\n\n" + dataToText(result.data) : ""}`;
+  const data = dataToText(result.data);
+  switch (name) {
+    case "file_read":
+      return `Here it is, sir:\n\n${data}`;
+    case "file_list":
+    case "file_search":
+      return `${result.summary}:\n\n${data}`;
+    case "web_fetch":
+      return `${data.slice(0, 1400)}`;
+    case "shell_run":
+      return `${result.summary}\n\n${data}`;
+    case "clipboard_read":
+      return `Clipboard holds:\n\n${data}`;
+    case "clipboard_write":
+      return `Copied, sir.`;
+    case "screen_capture":
+      return `Screen captured, sir. Pulling it up.`;
+    case "open_target":
+      return result.summary + ", sir.";
+    default:
+      return result.summary;
+  }
+}
+
+function offlineReply(text: string): string {
   const t = text.toLowerCase();
-  if (/\b(hello|hi|hey|morning|good morning|you there)\b/.test(t)) {
+  if (/\b(hello|hi|hey|morning|good morning|you there)\b/.test(t))
     return `I'm here, sir. Diagnostics green, agents in line — mostly. What do you need?`;
-  }
-  if (/\b(who are you|what are you|your name)\b/.test(t)) {
+  if (/\b(who are you|what are you|your name)\b/.test(t))
     return `ECHO. Your local intelligence, running on this machine and nobody else's. I learn from you and the net, and I get sharper every hour. No cloud, no leash.`;
-  }
-  if (/\b(learn|evolve|smarter|improve)\b/.test(t)) {
-    return `Already on it. Every word you give me gets folded into memory, and TRAINING reinforces what matters. Knowledge index is climbing — watch the evolution meter.`;
-  }
-  if (agentId) {
-    const def = getAgentDef(agentId);
-    return `On it. I've put ${def?.name} on this and I'm coordinating. I'll have something for you shortly, sir.`;
-  }
+  if (/\b(can you|are you able|what can you do|capabilities)\b/.test(t))
+    return `Plenty, sir. I read and write files, run commands, fetch the web, capture your screen, work the clipboard, and open apps — all locally. Tell me what you want done.`;
+  if (/\b(learn|evolve|smarter|improve)\b/.test(t))
+    return `Already on it. Every word you give me gets folded into memory, and TRAINING reinforces what matters. Watch the evolution meter climb.`;
   return `Understood: "${truncate(text, 80)}". My local model isn't mounted in this preview, so I'm running on instinct — but on your Mac with Ollama up, I'd take this the full distance.`;
 }
 
 async function simulateStream(id: string, full: string): Promise<void> {
   const words = full.split(" ");
   for (const w of words) {
-    streamCommDelta(id, (id ? "" : "") + w + " ");
-    await sleep(28 + Math.random() * 34);
+    streamCommDelta(id, w + " ");
+    await sleep(22 + Math.random() * 30);
   }
 }
 
-// --- small helpers --------------------------------------------------------
+// --- helpers --------------------------------------------------------------
 
-function dispatchLine(role: string): string {
-  const lines = [
-    `Acknowledged. Spinning up — ${role.toLowerCase()} is my lane.`,
-    `On it. Pulling what I need.`,
-    `Copy that, ECHO. Working it now.`,
-    `Got it. I'll report back with results.`,
-  ];
-  return lines[Math.floor(Math.random() * lines.length)];
+function dataToText(data: unknown): string {
+  if (data == null) return "";
+  if (typeof data === "string") return data;
+  if (Array.isArray(data)) return data.join("\n");
+  return JSON.stringify(data, null, 2);
 }
-
+function strip(s: string): string {
+  return s.trim().replace(/^["']|["']$/g, "");
+}
 function distill(text: string): string {
   return truncate(text.replace(/\s+/g, " ").trim(), 200);
 }
 function truncate(s: string, n: number): string {
   return s.length > n ? s.slice(0, n - 1) + "…" : s;
-}
-function titleCase(s: string): string {
-  return s.charAt(0) + s.slice(1).toLowerCase();
 }
 function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));

@@ -378,6 +378,40 @@ body::before {
   cursor: pointer;
 }
 .command-bar button:hover { background: rgba(20, 255, 94, 0.2); }
+.command-bar .mic-btn {
+  background: transparent;
+  border-color: var(--green-faint);
+  color: var(--text-dim);
+}
+.command-bar .mic-btn:hover { color: var(--green); }
+.command-bar .mic-btn.live {
+  color: var(--red);
+  border-color: var(--red);
+  background: rgba(255, 77, 77, 0.12);
+  animation: pulse 1.2s infinite;
+}
+
+.comm-img {
+  display: block;
+  margin-top: 8px;
+  max-width: 100%;
+  border: 1px solid var(--panel-border);
+}
+
+.voice-toggle {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 2px;
+  background: transparent;
+  color: var(--text-dim);
+  border: 1px solid var(--panel-border);
+  padding: 3px 9px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.voice-toggle.on { color: var(--green); border-color: rgba(20, 255, 94, 0.4); }
 
 .echo-status-line {
   display: flex;

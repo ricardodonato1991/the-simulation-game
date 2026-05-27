@@ -29,6 +29,7 @@ export default function CommLog({ comms, operator }: { comms: CommMessage[]; ope
             <div className="body">
               {m.text}
               {m.streaming && <span className="caret">▋</span>}
+              {m.imageUrl && <img className="comm-img" src={m.imageUrl} alt="screen capture" />}
             </div>
           </div>
         ))}

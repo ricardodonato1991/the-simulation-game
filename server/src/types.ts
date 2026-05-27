@@ -40,6 +40,7 @@ export interface CommMessage {
   text: string;
   ts: number;
   streaming?: boolean;
+  imageUrl?: string; // e.g. a screen capture ECHO took
 }
 
 export interface AgentCommMessage {

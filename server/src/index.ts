@@ -7,11 +7,19 @@ import { ollama } from "./ollama.js";
 import { handleCommand } from "./echo.js";
 import { startSimulation, stopSimulation } from "./simulation.js";
 import { setSink, snapshot, pushComm } from "./store.js";
+import { ACTIONS, shotsDir } from "./actions.js";
 import type { ClientMessage, ServerMessage } from "./types.js";
 
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: "1mb" }));
+
+// Serve screen captures ECHO takes so they can be shown in the comm log.
+app.use("/shots", express.static(shotsDir()));
+
+app.get("/api/actions", (_req, res) => {
+  res.json(ACTIONS.map((a) => ({ name: a.name, agent: a.agent, description: a.description })));
+});
 
 app.get("/api/health", (_req, res) => {
   res.json({

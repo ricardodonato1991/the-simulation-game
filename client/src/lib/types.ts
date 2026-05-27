@@ -40,6 +40,7 @@ export interface CommMessage {
   text: string;
   ts: number;
   streaming?: boolean;
+  imageUrl?: string;
 }
 
 export interface AgentCommMessage {

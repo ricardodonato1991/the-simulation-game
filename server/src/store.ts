@@ -103,8 +103,13 @@ export function tickBrain(): void {
 
 // ---- comms (ECHO <-> Ricardo) -------------------------------------------
 
-export function pushComm(from: CommMessage["from"], text: string, streaming = false): CommMessage {
-  const msg: CommMessage = { id: randomUUID(), from, text, ts: Date.now(), streaming };
+export function pushComm(
+  from: CommMessage["from"],
+  text: string,
+  streaming = false,
+  imageUrl?: string
+): CommMessage {
+  const msg: CommMessage = { id: randomUUID(), from, text, ts: Date.now(), streaming, imageUrl };
   state.comms.push(msg);
   cap(state.comms, config.maxCommsInMemory);
   emit({ type: "comm", payload: msg });
