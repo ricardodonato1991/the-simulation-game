@@ -6,7 +6,7 @@ import { config } from "./config.js";
 import { ollama } from "./ollama.js";
 import { handleCommand } from "./echo.js";
 import { startSimulation, stopSimulation } from "./simulation.js";
-import { setSink, snapshot, pushComm } from "./store.js";
+import { setSink, snapshot, pushComm, setModel } from "./store.js";
 import { ACTIONS, shotsDir } from "./actions.js";
 import type { ClientMessage, ServerMessage } from "./types.js";
 
@@ -72,6 +72,10 @@ wss.on("connection", (ws) => {
     }
     if (msg.type === "command") {
       void handleCommand(msg.payload.text);
+    } else if (msg.type === "set_model") {
+      if (setModel(msg.payload.model)) {
+        pushComm("echo", `Switching minds — I'm running on ${msg.payload.model} now, sir.`);
+      }
     }
   });
 

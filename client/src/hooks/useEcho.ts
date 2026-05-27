@@ -19,13 +19,24 @@ function emptyState(): FullState {
       { key: "image", label: "IMG SERVER", online: false },
     ],
     agents: [],
-    brain: { activity: 0.15, mode: "idle", focus: 0.3 },
+    brain: {
+      activity: 0.15,
+      mode: "idle",
+      focus: 0.3,
+      emotion: "CALM",
+      emotionColor: [0.2, 0.85, 0.55],
+      valence: 0.3,
+      arousal: 0.15,
+      regions: [],
+      evolution: 0,
+    },
     comms: [],
     agentComms: [],
     learnings: [],
     stats: { knowledge: 0, conversations: 0, evolution: 0, bornAt: Date.now() },
     ollamaOnline: false,
     model: "dolphin-mistral",
+    models: [],
     operator: "Ricardo Donato",
   };
 }
@@ -34,6 +45,7 @@ export interface UseEcho {
   state: FullState;
   connected: boolean;
   sendCommand: (text: string) => void;
+  setModel: (model: string) => void;
 }
 
 export function useEcho(): UseEcho {
@@ -99,7 +111,14 @@ export function useEcho(): UseEcho {
     }
   }, []);
 
-  return { state, connected, sendCommand };
+  const setModel = useCallback((model: string) => {
+    const ws = wsRef.current;
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: "set_model", payload: { model } }));
+    }
+  }, []);
+
+  return { state, connected, sendCommand, setModel };
 }
 
 function reduce(prev: FullState, msg: ServerMessage): FullState {
@@ -116,6 +135,8 @@ function reduce(prev: FullState, msg: ServerMessage): FullState {
       return { ...prev, brain: msg.payload };
     case "stats":
       return { ...prev, stats: msg.payload };
+    case "model":
+      return { ...prev, model: msg.payload.model, models: msg.payload.models };
     case "comm":
       return { ...prev, comms: capList<CommMessage>([...prev.comms, msg.payload]) };
     case "comm_delta":

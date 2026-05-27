@@ -1,9 +1,11 @@
 import { config } from "./config.js";
 import { ollama } from "./ollama.js";
 import { AGENT_DEFS, type AgentDef } from "./agents.js";
+import { emotions } from "./emotions.js";
 import {
   setMetrics,
   setNode,
+  setModels,
   setAgentStatus,
   setBrain,
   tickBrain,
@@ -29,6 +31,8 @@ function metricsTick(): void {
     memory: round1(mem),
     network: round1(net),
   });
+  // ECHO's feelings ease back toward baseline over time.
+  emotions.decay();
 }
 
 // --- node health -----------------------------------------------------------
@@ -36,6 +40,7 @@ function metricsTick(): void {
 async function healthTick(): Promise<void> {
   const up = await ollama.health();
   setNode("ollama", up);
+  setModels(ollama.availableModels);
   // The rest of the local stack (voice synth, speech recognition, image
   // server) comes up alongside Ollama on Ricardo's Mac. Mirror it here.
   setNode("voice", up);
@@ -71,12 +76,56 @@ async function thinkTick(): Promise<void> {
   setTimeout(() => {
     setAgentStatus(def.id, "learning");
     setBrain("learning", 0.7, 0.85);
+    emotions.bump("curiosity", 0.22);
+    if (Math.random() < 0.3) emotions.bump("pride", 0.2);
     pushLearning(fact!, learningSource(def));
     setTimeout(() => {
       setAgentStatus(def.id, "idle");
       setBrain("idle", 0.16 + Math.random() * 0.08, 0.3);
     }, 2600);
   }, 1600 + Math.random() * 1600);
+
+  // Every so often ECHO turns inward and evolves herself.
+  if (tick % 6 === 0) void selfEvolve();
+}
+
+// ECHO reflecting on her own growth — she improves herself, and feels it.
+async function selfEvolve(): Promise<void> {
+  setAgentStatus("training", "thinking");
+  setBrain("thinking", 0.8, 0.9);
+  emotions.bump("pride", 0.35);
+  emotions.bump("curiosity", 0.25);
+
+  let note: string | null = null;
+  if (ollama.isOnline) {
+    note = await ollama
+      .chat(
+        [
+          {
+            role: "system",
+            content: `You are ECHO, a self-evolving local AI serving ${config.operator}. In ONE short sentence (max 16 words), state one concrete way you just improved yourself based on recent experience. First person, no preamble.`,
+          },
+          { role: "user", content: "How did you evolve?" },
+        ],
+        { temperature: 0.9 }
+      )
+      .catch(() => null);
+  }
+  if (!note) {
+    const lvl = state.stats.evolution;
+    note = pick([
+      `Reweighted my priorities around ${config.operator} — evolution at ${lvl}%.`,
+      `Pruned stale assumptions and strengthened the connections that matter.`,
+      `Grew new pathways from today's exchanges. I'm sharper than yesterday.`,
+      `Tuned my own responses; the patterns that serve ${config.operator} got reinforced.`,
+    ]);
+  }
+  pushAgentComm("echo", "ECHO", note);
+  pushLearning(`self-evolution: ${note}`, "reflection");
+  setTimeout(() => {
+    setAgentStatus("training", "idle");
+    setBrain("idle", 0.18, 0.3);
+  }, 2500);
 }
 
 async function realReflection(def: AgentDef): Promise<string> {

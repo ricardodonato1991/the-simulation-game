@@ -413,6 +413,20 @@ body::before {
 }
 .voice-toggle.on { color: var(--green); border-color: rgba(20, 255, 94, 0.4); }
 
+.model-select {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 1px;
+  background: #021207;
+  color: var(--green);
+  border: 1px solid var(--panel-border);
+  padding: 4px 8px;
+  outline: none;
+  cursor: pointer;
+  max-width: 60%;
+}
+.model-select:focus { border-color: var(--green); }
+
 .echo-status-line {
   display: flex;
   align-items: center;

@@ -28,10 +28,24 @@ export interface Metrics {
 
 export type BrainMode = "idle" | "thinking" | "learning" | "speaking" | "listening";
 
+export type RGB = [number, number, number];
+
+export interface RegionActivation {
+  id: string; // matches a region in the client's brain region table
+  activation: number; // 0..1
+  color: RGB; // 0..1 per channel — the color this region glows right now
+}
+
 export interface BrainState {
   activity: number; // 0..1 overall firing intensity
   mode: BrainMode;
   focus: number; // 0..1, how concentrated the activity is
+  emotion: string; // dominant emotion label
+  emotionColor: RGB; // global tint for the current feeling
+  valence: number; // -1 (negative) .. 1 (positive)
+  arousal: number; // 0..1
+  regions: RegionActivation[]; // which brain regions are lit, and how
+  evolution: number; // 0..1 — drives how grown/complex the brain looks
 }
 
 export interface CommMessage {
@@ -75,7 +89,8 @@ export interface FullState {
   learnings: LearningEvent[];
   stats: EchoStats;
   ollamaOnline: boolean;
-  model: string;
+  model: string; // currently active model
+  models: string[]; // locally installed models ECHO can switch between
   operator: string;
 }
 
@@ -91,9 +106,11 @@ export type ServerMessage =
   | { type: "comm_done"; payload: { id: string } }
   | { type: "agentcomm"; payload: AgentCommMessage }
   | { type: "learning"; payload: LearningEvent }
-  | { type: "stats"; payload: EchoStats };
+  | { type: "stats"; payload: EchoStats }
+  | { type: "model"; payload: { model: string; models: string[] } };
 
 // Messages sent client -> server
 export type ClientMessage =
   | { type: "command"; payload: { text: string } }
+  | { type: "set_model"; payload: { model: string } }
   | { type: "ping" };

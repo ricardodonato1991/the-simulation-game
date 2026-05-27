@@ -15,8 +15,8 @@ export interface SpeechOutput {
 function pickVoice(): SpeechSynthesisVoice | null {
   const voices = window.speechSynthesis.getVoices();
   if (!voices.length) return null;
-  // Prefer a deeper English voice for ECHO; fall back to any English voice.
-  const pref = ["Daniel", "Google UK English Male", "Microsoft Guy", "Alex", "Google US English"];
+  // ECHO is "her" — prefer a female English voice; fall back to any English voice.
+  const pref = ["Samantha", "Victoria", "Karen", "Moira", "Serena", "Google UK English Female", "Microsoft Zira"];
   for (const name of pref) {
     const v = voices.find((x) => x.name.includes(name));
     if (v) return v;
@@ -36,8 +36,8 @@ export function useSpeechOutput(): SpeechOutput {
       const u = new SpeechSynthesisUtterance(clean.slice(0, 600));
       const v = pickVoice();
       if (v) u.voice = v;
-      u.rate = 1.02;
-      u.pitch = 0.85;
+      u.rate = 1.03;
+      u.pitch = 1.05;
       window.speechSynthesis.cancel(); // never let replies stack up
       window.speechSynthesis.speak(u);
     },

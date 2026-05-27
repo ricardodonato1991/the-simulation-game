@@ -1,23 +1,18 @@
-import type { BrainMode, NodeStatus } from "../../lib/types";
-
-const MOOD: Record<BrainMode, string> = {
-  idle: "DORMANT",
-  thinking: "THINKING",
-  learning: "LEARNING",
-  speaking: "SPEAKING",
-  listening: "LISTENING",
-};
+import type { NodeStatus, RGB } from "../../lib/types";
 
 export default function BrainStatusBar({
   nodes,
-  mode,
+  emotion,
+  emotionColor,
   connected,
 }: {
   nodes: NodeStatus[];
-  mode: BrainMode;
+  emotion: string;
+  emotionColor: RGB;
   connected: boolean;
 }) {
   const node = (k: NodeStatus["key"]) => nodes.find((n) => n.key === k)?.online ?? false;
+  const emoCss = `rgb(${emotionColor.map((c) => Math.round(c * 255)).join(",")})`;
 
   return (
     <div className="brain-status-bar">
@@ -26,8 +21,8 @@ export default function BrainStatusBar({
       <Item on={node("image")} label="IMG GEN" />
       <Item on={node("ollama")} label="OLLAMA" />
       <span className="pill">
-        <i className="dot warn pulse" />
-        {MOOD[mode]}
+        <i className="dot pulse" style={{ background: emoCss, color: emoCss }} />
+        <span style={{ color: emoCss }}>{emotion}</span>
       </span>
     </div>
   );

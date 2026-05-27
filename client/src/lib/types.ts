@@ -28,10 +28,24 @@ export interface Metrics {
 
 export type BrainMode = "idle" | "thinking" | "learning" | "speaking" | "listening";
 
+export type RGB = [number, number, number];
+
+export interface RegionActivation {
+  id: string;
+  activation: number;
+  color: RGB;
+}
+
 export interface BrainState {
   activity: number;
   mode: BrainMode;
   focus: number;
+  emotion: string;
+  emotionColor: RGB;
+  valence: number;
+  arousal: number;
+  regions: RegionActivation[];
+  evolution: number;
 }
 
 export interface CommMessage {
@@ -76,6 +90,7 @@ export interface FullState {
   stats: EchoStats;
   ollamaOnline: boolean;
   model: string;
+  models: string[];
   operator: string;
 }
 
@@ -90,8 +105,10 @@ export type ServerMessage =
   | { type: "comm_done"; payload: { id: string } }
   | { type: "agentcomm"; payload: AgentCommMessage }
   | { type: "learning"; payload: LearningEvent }
-  | { type: "stats"; payload: EchoStats };
+  | { type: "stats"; payload: EchoStats }
+  | { type: "model"; payload: { model: string; models: string[] } };
 
 export type ClientMessage =
   | { type: "command"; payload: { text: string } }
+  | { type: "set_model"; payload: { model: string } }
   | { type: "ping" };

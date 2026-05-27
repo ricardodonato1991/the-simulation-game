@@ -15,7 +15,7 @@ import BrainStatusBar from "./components/panels/BrainStatusBar";
 import CommandBar from "./components/panels/CommandBar";
 
 export default function App() {
-  const { state, connected, sendCommand } = useEcho();
+  const { state, connected, sendCommand, setModel } = useEcho();
   const [showSettings, setShowSettings] = useState(false);
   const voice = useSpeechOutput();
 
@@ -54,13 +54,20 @@ export default function App() {
 
           <div className="col col-center">
             <div className="brain-stage">
-              <Brain activity={state.brain.activity} mode={state.brain.mode} />
+              <Brain brain={state.brain} />
               <div className="brain-label">
-                <div className="brain-mode">{state.brain.mode.toUpperCase()}</div>
-                <div className="brain-sub">ECHO · NEURAL CORE</div>
+                <div className="brain-mode" style={{ color: emoCss(state.brain.emotionColor) }}>
+                  {state.brain.emotion}
+                </div>
+                <div className="brain-sub">ECHO · {state.brain.mode.toUpperCase()}</div>
               </div>
             </div>
-            <BrainStatusBar nodes={state.nodes} mode={state.brain.mode} connected={connected} />
+            <BrainStatusBar
+              nodes={state.nodes}
+              emotion={state.brain.emotion}
+              emotionColor={state.brain.emotionColor}
+              connected={connected}
+            />
             <div className="boss-banner">
               PRIME DIRECTIVE — SERVE &amp; LEARN FROM <b>{state.operator.toUpperCase()}</b>
             </div>
@@ -98,18 +105,31 @@ export default function App() {
         </footer>
       </div>
 
-      {showSettings && <Settings state={state} connected={connected} onClose={() => setShowSettings(false)} />}
+      {showSettings && (
+        <Settings
+          state={state}
+          connected={connected}
+          onSelectModel={setModel}
+          onClose={() => setShowSettings(false)}
+        />
+      )}
     </>
   );
+}
+
+function emoCss(c: [number, number, number]): string {
+  return `rgb(${Math.round(c[0] * 255)}, ${Math.round(c[1] * 255)}, ${Math.round(c[2] * 255)})`;
 }
 
 function Settings({
   state,
   connected,
+  onSelectModel,
   onClose,
 }: {
   state: ReturnType<typeof useEcho>["state"];
   connected: boolean;
+  onSelectModel: (model: string) => void;
   onClose: () => void;
 }) {
   return (
@@ -124,21 +144,42 @@ function Settings({
         placeItems: "center",
       }}
     >
-      <div className="panel" style={{ width: 420, maxWidth: "90vw" }} onClick={(e) => e.stopPropagation()}>
+      <div className="panel" style={{ width: 440, maxWidth: "90vw" }} onClick={(e) => e.stopPropagation()}>
         <div className="panel-title">
           SETTINGS <span className="tag">ECHO CORE</span>
         </div>
         <Line k="OPERATOR" v={state.operator} />
-        <Line k="LOCAL MODEL" v={state.model} />
+
+        <div className="row" style={{ alignItems: "center" }}>
+          <span className="label">BRAIN / MODEL</span>
+          {state.models.length ? (
+            <select
+              className="model-select"
+              value={state.model}
+              onChange={(e) => onSelectModel(e.target.value)}
+            >
+              {state.models.map((m) => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <span className="state s-active">{state.model}</span>
+          )}
+        </div>
+
         <Line k="OLLAMA" v={state.ollamaOnline ? "ONLINE" : "OFFLINE"} />
         <Line k="CORE LINK" v={connected ? "CONNECTED" : "RECONNECTING"} />
+        <Line k="FEELING" v={state.brain.emotion} />
         <Line k="KNOWLEDGE" v={String(state.stats.knowledge)} />
         <Line k="EVOLUTION" v={`${state.stats.evolution}%`} />
         <div className="learn-line" style={{ marginTop: 10, lineHeight: 1.6 }}>
-          ECHO runs entirely on your Mac. To give it real intelligence, install Ollama and pull an
-          uncensored model:
+          ECHO runs entirely on your Mac — no internet required to think, act, or speak. Pull any
+          uncensored local model and switch her brain above:
           <br />
-          <span className="src">ollama pull dolphin-mistral</span>
+          <span className="src">ollama pull dolphin-mistral</span> ·{" "}
+          <span className="src">ollama pull deepseek-r1</span>
           <br />
           Override via env vars: <span className="src">ECHO_MODEL</span>, <span className="src">OLLAMA_URL</span>,{" "}
           <span className="src">ECHO_OPERATOR</span>.

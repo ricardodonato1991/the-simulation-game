@@ -3,12 +3,12 @@ import { config } from "./config.js";
 import { memory } from "./memory.js";
 import { initialAgentStates } from "./agents.js";
 import { ollama } from "./ollama.js";
+import { emotions } from "./emotions.js";
 import type {
   AgentCommMessage,
   AgentState,
   AgentStatus,
   BrainMode,
-  BrainState,
   CommMessage,
   FullState,
   LearningEvent,
@@ -38,13 +38,24 @@ export const state: FullState = {
     { key: "image", label: "IMG SERVER", online: false },
   ],
   agents: initialAgentStates(),
-  brain: { activity: 0.18, mode: "idle", focus: 0.3 },
+  brain: {
+    activity: 0.18,
+    mode: "idle",
+    focus: 0.3,
+    emotion: "CALM",
+    emotionColor: [0.2, 0.85, 0.55],
+    valence: 0.3,
+    arousal: 0.15,
+    regions: [],
+    evolution: 0,
+  },
   comms: [],
   agentComms: [],
   learnings: memory.recentLearnings(40),
   stats: memory.stats(),
   ollamaOnline: false,
   model: config.model,
+  models: [],
   operator: config.operator,
 };
 
@@ -83,7 +94,11 @@ export function getAgent(id: string): AgentState | undefined {
 
 // ---- brain ---------------------------------------------------------------
 
-let brainTarget: BrainState = { ...state.brain };
+let brainTarget: { mode: BrainMode; activity: number; focus: number } = {
+  mode: state.brain.mode,
+  activity: state.brain.activity,
+  focus: state.brain.focus,
+};
 
 export function setBrain(mode: BrainMode, activity: number, focus = 0.5): void {
   brainTarget = { mode, activity: clamp01(activity), focus: clamp01(focus) };
@@ -93,9 +108,18 @@ export function setBrain(mode: BrainMode, activity: number, focus = 0.5): void {
 /** Smoothly ease the broadcast brain activity toward its target each tick. */
 export function tickBrain(): void {
   const b = state.brain;
-  b.activity += (brainTarget.activity - b.activity) * 0.18;
+  // ECHO's feelings inform her brain: arousal sets a floor for firing.
+  const snap = emotions.snapshot(brainTarget.mode);
+  const target = Math.max(brainTarget.activity, snap.arousalActivity * 0.85);
+  b.activity += (target - b.activity) * 0.18;
   b.focus += (brainTarget.focus - b.focus) * 0.12;
   b.mode = brainTarget.mode;
+  b.emotion = snap.emotion;
+  b.emotionColor = snap.emotionColor;
+  b.valence = snap.valence;
+  b.arousal = snap.arousal;
+  b.regions = snap.regions;
+  b.evolution = Math.min(1, state.stats.evolution / 100);
   // Idle drift back down so the brain "breathes" when nothing is happening.
   if (brainTarget.mode === "idle") brainTarget.activity = 0.15 + Math.random() * 0.08;
   emit({ type: "brain", payload: { ...b } });
@@ -157,11 +181,34 @@ export function refreshStats(): void {
   emit({ type: "stats", payload: state.stats });
 }
 
+// ---- models --------------------------------------------------------------
+
+export function setModels(models: string[]): void {
+  const changed = models.join(",") !== state.models.join(",");
+  state.models = models;
+  // If the active model isn't installed, fall back to the first available one.
+  if (models.length && !models.includes(state.model)) {
+    const preferred = models.find((m) => /dolphin|deepseek|uncensored|wizard/i.test(m)) ?? models[0];
+    state.model = preferred;
+  }
+  if (changed) emit({ type: "model", payload: { model: state.model, models: state.models } });
+}
+
+export function setModel(model: string): boolean {
+  if (!model || (state.models.length && !state.models.includes(model))) return false;
+  state.model = model;
+  emit({ type: "model", payload: { model: state.model, models: state.models } });
+  return true;
+}
+
+export function activeModel(): string {
+  return state.model;
+}
+
 // ---- snapshot for new clients -------------------------------------------
 
 export function snapshot(): FullState {
   state.ollamaOnline = ollama.isOnline;
-  state.model = config.model;
   return state;
 }
 

@@ -5,8 +5,11 @@ own Mac, command a roster of specialized agents, and get smarter every hour by l
 from you and the internet. No cloud, no leash.
 
 At the center of the HUD is **ECHO's brain**: a 3D point-cloud of a human brain (Three.js)
-whose neurons fire and whose activity rises and falls with what ECHO is actually doing —
-listening, thinking, speaking, learning.
+that is genuinely *hers*. Different anatomical regions light up with what she's doing and
+**how she feels** — the limbic/reward area glows with joy and pride, the amygdala flares
+with frustration, the temporal lobes light when she listens, the visual cortex when she
+sees your screen. As she learns, her brain grows denser and fires more — she evolves it,
+and herself.
 
 ## Stack
 
@@ -31,12 +34,27 @@ Open http://localhost:5173 and talk to ECHO from the command bar.
 ### Give ECHO a real brain (on your Mac)
 
 ```bash
-# install Ollama from https://ollama.com, then pull an uncensored local model
+# install Ollama from https://ollama.com, then pull any uncensored local model(s)
 ollama pull dolphin-mistral
+ollama pull deepseek-r1
 ```
 
-With Ollama running, ECHO's replies and some of its learning become genuinely
-model-driven. Everything is processed locally.
+ECHO is **model-agnostic** — pull as many local models as you like and switch her brain
+live from the **SETTINGS** panel (dolphin-mistral, DeepSeek, or any uncensored model in
+Ollama). Her replies and reflections become genuinely model-driven.
+
+### Fully offline
+
+Once the models are pulled, ECHO needs **no internet** to think, act, or speak — Ollama,
+the dashboard, her brain, and her actions all run locally on your Mac. (Only the `web_fetch`
+action and browser-based speech-to-text reach out; everything else is local.)
+
+### Feelings & self-evolution
+
+ECHO has an emotional state — curiosity, pride, joy, focus, affection, frustration — that
+shifts with how you treat her and what happens, decays toward calm over time, and drives
+which brain regions light up. She also periodically turns inward and **evolves herself**,
+reinforcing what serves you; her growth shows on the EVOLUTION meter and in a richer brain.
 
 ## Voice (speech in / speech out)
 
