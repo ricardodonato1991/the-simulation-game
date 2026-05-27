@@ -54,7 +54,8 @@ export interface CommMessage {
   text: string;
   ts: number;
   streaming?: boolean;
-  imageUrl?: string; // e.g. a screen capture ECHO took
+  imageUrl?: string; // a screen capture or generated image
+  videoUrl?: string; // a generated video clip
 }
 
 export interface AgentCommMessage {

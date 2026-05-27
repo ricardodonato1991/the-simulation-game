@@ -78,8 +78,27 @@ capability (and lights up the owning agent):
 | Shell           | `run command: git status`  (or just `!git status`) |
 | Web             | `fetch https://news.ycombinator.com`         |
 | Screen          | `what's on my screen` (captures + shows it)  |
+| **Images**      | `generate an image of a neon city at night` (uncensored) |
+| **Video**       | `make a video of waves crashing` (uncensored)|
 | Clipboard       | `read the clipboard`, `copy hello to clipboard` |
 | Open            | `open https://github.com`, `open Spotify`    |
+
+### Uncensored images & video
+
+ECHO generates images and video **locally and uncensored** — no content filter is applied;
+the model you load decides. You need a local Stable Diffusion server (the de-facto standard
+[Automatic1111](https://github.com/AUTOMATIC1111/stable-diffusion-webui) or
+[Forge](https://github.com/lllyasviel/stable-diffusion-webui-forge), launched with `--api`)
+and `ffmpeg` for video:
+
+```bash
+# in your Stable Diffusion WebUI folder, expose the API:
+./webui.sh --api          # serves on http://127.0.0.1:7860
+brew install ffmpeg       # so ECHO can assemble video frames into a clip
+```
+
+Images come back from the **IMAGE** agent; video clips are built by the **VIDEO** agent
+(short latent-interpolated clips assembled with ffmpeg) and play inline in the comm log.
 
 When Ollama is running, ECHO can also pick the right action for fuzzier requests on its
 own. File actions are scoped to a workspace and shell access can be disabled — see below.
@@ -95,6 +114,10 @@ own. File actions are scoped to a workspace and shell access can be disabled —
 | `ECHO_WORKSPACE`    | your home directory       | Root that file actions are confined to     |
 | `ECHO_ALLOW_SHELL`  | `1` (on)                  | Set to `0` to forbid ECHO running commands |
 | `ECHO_SHELL_TIMEOUT`| `15000`                   | Max ms a shell command may run             |
+| `ECHO_IMAGE_URL`    | `http://127.0.0.1:7860`   | Local Stable Diffusion (A1111/Forge) API   |
+| `ECHO_IMAGE_W` / `ECHO_IMAGE_H` | `512`         | Generated image dimensions                 |
+| `ECHO_VIDEO_FRAMES` | `24`                      | Frames per generated video clip            |
+| `ECHO_VIDEO_FPS`    | `12`                      | Frame rate of generated clips              |
 
 ## How the learning works
 

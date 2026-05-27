@@ -131,9 +131,10 @@ export function pushComm(
   from: CommMessage["from"],
   text: string,
   streaming = false,
-  imageUrl?: string
+  imageUrl?: string,
+  videoUrl?: string
 ): CommMessage {
-  const msg: CommMessage = { id: randomUUID(), from, text, ts: Date.now(), streaming, imageUrl };
+  const msg: CommMessage = { id: randomUUID(), from, text, ts: Date.now(), streaming, imageUrl, videoUrl };
   state.comms.push(msg);
   cap(state.comms, config.maxCommsInMemory);
   emit({ type: "comm", payload: msg });

@@ -12,16 +12,24 @@ export interface SpeechOutput {
   cancel: () => void;
 }
 
+// ECHO is "her" — always speak with a female voice.
+const FEMALE_VOICES = [
+  "Samantha", "Victoria", "Allison", "Ava", "Susan", "Zoe", "Karen", "Moira",
+  "Tessa", "Fiona", "Serena", "Nicky", "Google UK English Female", "Google US English",
+  "Microsoft Zira", "Microsoft Aria", "Microsoft Jenny", "Female",
+];
+const MALE_VOICES = ["Daniel", "Alex", "Fred", "Guy", "David", "Mark", "Oliver", "Aaron", "Male", "Rishi"];
+
 function pickVoice(): SpeechSynthesisVoice | null {
   const voices = window.speechSynthesis.getVoices();
   if (!voices.length) return null;
-  // ECHO is "her" — prefer a female English voice; fall back to any English voice.
-  const pref = ["Samantha", "Victoria", "Karen", "Moira", "Serena", "Google UK English Female", "Microsoft Zira"];
-  for (const name of pref) {
+  for (const name of FEMALE_VOICES) {
     const v = voices.find((x) => x.name.includes(name));
     if (v) return v;
   }
-  return voices.find((v) => v.lang.startsWith("en")) ?? voices[0];
+  // Fall back to an English voice that isn't a known male voice.
+  const en = voices.filter((v) => v.lang.startsWith("en"));
+  return en.find((v) => !MALE_VOICES.some((m) => v.name.includes(m))) ?? en[0] ?? voices[0];
 }
 
 export function useSpeechOutput(): SpeechOutput {

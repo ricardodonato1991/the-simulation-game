@@ -55,6 +55,7 @@ export interface CommMessage {
   ts: number;
   streaming?: boolean;
   imageUrl?: string;
+  videoUrl?: string;
 }
 
 export interface AgentCommMessage {

@@ -1,5 +1,6 @@
 import { config } from "./config.js";
 import { ollama } from "./ollama.js";
+import { imageServer } from "./imageserver.js";
 import { AGENT_DEFS, type AgentDef } from "./agents.js";
 import { emotions } from "./emotions.js";
 import {
@@ -41,11 +42,11 @@ async function healthTick(): Promise<void> {
   const up = await ollama.health();
   setNode("ollama", up);
   setModels(ollama.availableModels);
-  // The rest of the local stack (voice synth, speech recognition, image
-  // server) comes up alongside Ollama on Ricardo's Mac. Mirror it here.
+  // Voice synth + speech recognition run in the browser alongside Ollama.
   setNode("voice", up);
   setNode("speech", up);
-  setNode("image", up);
+  // The image server (Stable Diffusion) is its own local service.
+  setNode("image", await imageServer.health());
 }
 
 // --- autonomous "always thinking" loop -------------------------------------

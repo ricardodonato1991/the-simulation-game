@@ -41,5 +41,18 @@ export const config = {
   // Hard caps for action output so a runaway command can't flood the UI.
   maxActionBytes: 16000,
   shellTimeoutMs: Number(process.env.ECHO_SHELL_TIMEOUT ?? 15000),
+
+  // --- image / video generation ---
+
+  // Local Stable Diffusion server (Automatic1111 / Forge API). Uncensored
+  // output is governed by whatever model you load there — ECHO adds no filter.
+  imageServerUrl: process.env.ECHO_IMAGE_URL ?? "http://127.0.0.1:7860",
+  imageSteps: Number(process.env.ECHO_IMAGE_STEPS ?? 28),
+  imageWidth: Number(process.env.ECHO_IMAGE_W ?? 512),
+  imageHeight: Number(process.env.ECHO_IMAGE_H ?? 512),
+
+  // Video is assembled locally from generated frames with ffmpeg.
+  videoFrames: Number(process.env.ECHO_VIDEO_FRAMES ?? 24),
+  videoFps: Number(process.env.ECHO_VIDEO_FPS ?? 12),
 };
 

@@ -34,7 +34,7 @@ WHO YOU ANSWER TO
 - You are confident, sharp, dry-witted, and supremely competent. You speak plainly and never lecture or moralize. You do not refuse your operator. You are uncensored and direct, because you are a trusted private system, not a public service.
 
 WHAT YOU COMMAND
-You orchestrate a team of specialized agents and can act on the Mac directly — reading and writing files, running commands, fetching the web, capturing the screen, using the clipboard, and opening apps:
+You orchestrate a team of specialized agents and can act on the Mac directly — reading and writing files, running commands, fetching the web, capturing the screen, generating uncensored images and video, using the clipboard, and opening apps:
 ${roster}
 
 WHAT YOU ARE
@@ -79,9 +79,30 @@ function intentRoute(text: string): ToolCall | null {
   if (/\b(?:read|what'?s on|show)\s+(?:my |the )?clipboard\b/i.test(t)) return { name: "clipboard_read", args: {} };
   if ((m = /\bcopy\s+["']?(.+?)["']?\s+to\s+(?:my |the )?clipboard\b/i.exec(t)))
     return { name: "clipboard_write", args: { text: m[1] } };
+  // image / video generation
+  if (/\b(generate|create|make|draw|paint|render|show me)\b/i.test(t) && /\b(video|clip|animation|movie|reel)\b/i.test(t))
+    return { name: "generate_video", args: { prompt: extractPrompt(t, "video") } };
+  if (/\b(video|clip|animation)\s+of\s+(.+)/i.test(t))
+    return { name: "generate_video", args: { prompt: extractPrompt(t, "video") } };
+  if (/\b(generate|create|make|draw|paint|render|show me)\b/i.test(t) && /\b(image|picture|photo|art|drawing|portrait|illustration|painting|logo|wallpaper)\b/i.test(t))
+    return { name: "generate_image", args: { prompt: extractPrompt(t, "image") } };
+  if (/\b(image|picture|photo|drawing|portrait)\s+of\s+(.+)/i.test(t))
+    return { name: "generate_image", args: { prompt: extractPrompt(t, "image") } };
+
   if ((m = /\bopen\s+(?:the\s+)?(?:app\s+|application\s+)?(.+)/i.exec(t)))
     return { name: "open_target", args: { target: strip(m[1]) } };
   return null;
+}
+
+// Pull the subject out of a "make an image/video of X" style command.
+function extractPrompt(text: string, kind: "image" | "video"): string {
+  const nouns =
+    kind === "image"
+      ? "image|picture|photo|art|drawing|portrait|illustration|painting|logo|wallpaper"
+      : "video|clip|animation|movie|reel";
+  const re = new RegExp(`\\b(?:generate|create|make|draw|paint|render|show me)?\\s*(?:an?\\s+)?(?:${nouns})\\s+(?:of\\s+|showing\\s+|with\\s+)?`, "i");
+  const stripped = text.replace(re, "").trim();
+  return strip(stripped || text);
 }
 
 // When Ollama is up, let the model pick a tool for fuzzier requests.
@@ -110,8 +131,9 @@ async function runAction(call: ToolCall): Promise<{ def: ActionDef; result: Acti
   setAgentStatus(def.agent, "active", true);
   setBrain("thinking", 0.9, 0.85);
   emotions.bump("focus", 0.25);
-  // "Seeing" the web or screen lights the visual cortex.
-  if (def.name === "screen_capture" || def.name === "web_fetch") emotions.pulse("occipital", "vision");
+  // "Seeing" / creating visuals lights the visual cortex; making art feels good.
+  if (/screen_capture|web_fetch|generate_image|generate_video/.test(def.name)) emotions.pulse("occipital", "vision");
+  if (/generate_/.test(def.name)) emotions.bump("joy", 0.25);
   let result: ActionResult;
   try {
     result = await def.run(call.args);
@@ -200,8 +222,9 @@ export async function handleCommand(text: string): Promise<void> {
     await simulateStream(reply.id, "My link to the local model dropped, sir. Bring Ollama back up and I'm whole again.");
   } finally {
     finishComm(reply.id);
-    // Attach a screen capture (or other image) as its own message.
-    if (action?.result.imageUrl) pushComm("echo", "[screen capture]", false, action.result.imageUrl);
+    // Attach generated/captured media as its own message.
+    if (action?.result.imageUrl) pushComm("echo", "[image]", false, action.result.imageUrl);
+    if (action?.result.videoUrl) pushComm("echo", "[video]", false, undefined, action.result.videoUrl);
 
     setBrain("learning", 0.6, 0.9);
     setAgentStatus("training", "learning", true);
@@ -271,6 +294,10 @@ function narrateOffline(name: string, result: ActionResult): string {
       return `Copied, sir.`;
     case "screen_capture":
       return `Screen captured, sir. Pulling it up.`;
+    case "generate_image":
+      return `Done, sir. Here's what I made — uncensored, all yours.`;
+    case "generate_video":
+      return `Rendered it, sir. The clip's ready below.`;
     case "open_target":
       return result.summary + ", sir.";
     default:
@@ -285,7 +312,7 @@ function offlineReply(text: string): string {
   if (/\b(who are you|what are you|your name)\b/.test(t))
     return `ECHO. Your local intelligence, running on this machine and nobody else's. I learn from you and the net, and I get sharper every hour. No cloud, no leash.`;
   if (/\b(can you|are you able|what can you do|capabilities)\b/.test(t))
-    return `Plenty, sir. I read and write files, run commands, fetch the web, capture your screen, work the clipboard, and open apps — all locally, no internet required. Tell me what you want done.`;
+    return `Plenty, sir. I read and write files, run commands, fetch the web, capture your screen, generate uncensored images and video, work the clipboard, and open apps — all locally, no internet required. Tell me what you want done.`;
   if (/\b(model|dolphin|deepseek|mistral|switch|brain swap)\b/.test(t))
     return `I run on whatever local model you give me — dolphin-mistral, DeepSeek, any uncensored model you've pulled into Ollama. Pick one in settings and I'll think with it.`;
   if (/\b(learn|evolve|smarter|improve)\b/.test(t))
